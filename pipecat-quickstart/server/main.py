@@ -18,7 +18,7 @@ from typing import Any
 
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import BackgroundTasks, FastAPI
+from fastapi import BackgroundTasks, FastAPI, HTTPException
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from loguru import logger
@@ -90,11 +90,14 @@ def _parse_record_md(path: Path) -> dict[str, Any]:
         ref_match = re.search(r"\*\*参考答案：\*\*\s*(.+?)(?=\n---|\n## |$)", block, re.DOTALL)
         answer_text = answer_match.group(1).strip() if answer_match else ""
         ref_text = ref_match.group(1).strip() if ref_match else ""
+        time_match = re.search(r"\*\*用时：\*\*\s*(.+?)(?=\n\*\*|\n---|\n## |$)", block)
+        time_text = time_match.group(1).strip() if time_match else ""
         record["questions"].append(
             {
                 "category": cat_match.group(1) if cat_match else "",
                 "prompt": prompt_match.group(1).strip() if prompt_match else "",
                 "answer": answer_text,
+                "elapsed": time_text,
                 "reference_answer": ref_text,
             }
         )
@@ -103,6 +106,27 @@ def _parse_record_md(path: Path) -> dict[str, Any]:
     record["feedback"] = feedback_match.group(1).strip() if feedback_match else ""
 
     return record
+
+
+@app.get("/api/stats")
+async def get_stats():
+    """Return question bank practice coverage statistics."""
+    from interview_practice import get_practice_stats
+
+    return get_practice_stats()
+
+
+@app.delete("/api/records/{filename}")
+async def delete_record(filename: str):
+    """Delete a practice record by filename."""
+    # Prevent path traversal: only allow timestamped .md filenames
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}_\d{6}\.md", filename):
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    path = _RECORDS_DIR / filename
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Record not found")
+    path.unlink()
+    return {"status": "deleted"}
 
 
 @app.get("/api/records")

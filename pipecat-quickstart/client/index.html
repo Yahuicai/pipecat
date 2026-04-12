@@ -96,6 +96,83 @@
   .record-q-ref-label { font-weight: 600; color: #059669; font-size: 12px; }
   .record-feedback-label { font-weight: 600; margin-top: 8px; margin-bottom: 2px; color: var(--danger); }
   .record-feedback { color: var(--text); white-space: pre-wrap; }
+  .record-elapsed { font-size: 11px; color: var(--text-muted); }
+  .record-delete-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-muted); font-size: 14px; padding: 0 4px;
+    line-height: 1; transition: color .2s;
+  }
+  .record-delete-btn:hover { color: var(--danger); }
+
+  /* ---------- stats panel ---------- */
+  .stats-panel {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .stats-title {
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .stats-total-bar-wrap {
+    background: var(--border);
+    border-radius: 4px;
+    height: 8px;
+    margin-bottom: 6px;
+  }
+  .stats-total-bar {
+    background: var(--primary);
+    border-radius: 4px;
+    height: 100%;
+    transition: width .5s;
+  }
+  .stats-cat { margin-bottom: 4px; }
+  .stats-cat-label {
+    display: flex;
+    justify-content: space-between;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+  }
+  .stats-cat-bar-wrap {
+    background: var(--border);
+    border-radius: 3px;
+    height: 5px;
+  }
+  .stats-cat-bar {
+    background: var(--success);
+    border-radius: 3px;
+    height: 100%;
+    transition: width .5s;
+  }
+
+  /* ---------- feedback sections ---------- */
+  .feedback-sections { display: none; flex-direction: column; gap: 10px; }
+  .feedback-sections.visible { display: flex; }
+  .fb-section {
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .fb-section-title {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .fb-section-body {
+    font-size: 14px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+  }
+  .fb-overall { background: #eff6ff; }
+  .fb-overall .fb-section-title { color: #1d4ed8; }
+  .fb-strength { background: #f0fdf4; }
+  .fb-strength .fb-section-title { color: #15803d; }
+  .fb-issue { background: #fff7ed; }
+  .fb-issue .fb-section-title { color: #c2410c; }
+  .fb-advice { background: #faf5ff; }
+  .fb-advice .fb-section-title { color: #7e22ce; }
 
   /* ---------- resize handle ---------- */
   .resize-handle {
@@ -271,6 +348,16 @@
 <!-- ====== LEFT SIDEBAR ====== -->
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-header">历史练习记录</div>
+  <div class="stats-panel" id="statsPanel">
+    <div class="stats-title">
+      <span>题库覆盖</span>
+      <span id="statsTotalText" style="color:var(--text-muted)">加载中...</span>
+    </div>
+    <div class="stats-total-bar-wrap">
+      <div class="stats-total-bar" id="statsTotalBar" style="width:0%"></div>
+    </div>
+    <div id="statsCats"></div>
+  </div>
   <div class="sidebar-list" id="historyList">
     <div class="sidebar-empty" id="historyEmpty">暂无记录</div>
   </div>
@@ -310,9 +397,16 @@
   </div>
 
   <div class="card">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:14px;color:var(--text-muted)">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
+        <input type="checkbox" id="showQuestionToggle" checked style="width:16px;height:16px;accent-color:var(--primary)">
+        <span>显示题目文字</span>
+      </label>
+      <span style="font-size:12px;opacity:.7">（取消勾选可模拟真实面试）</span>
+    </div>
     <div class="btn-row">
-      <button class="btn btn-primary" id="btnStart" disabled>开始练习</button>
-      <button class="btn btn-danger" id="btnDone" disabled>答题完毕</button>
+      <button type="button" class="btn btn-primary" id="btnStart" disabled>开始练习</button>
+      <button type="button" class="btn btn-danger" id="btnDone" disabled>答题完毕</button>
     </div>
   </div>
 
@@ -324,6 +418,24 @@
   <div class="card feedback-card" id="feedbackCard">
     <div class="section-title">总点评</div>
     <div class="feedback-area" id="feedbackArea"></div>
+    <div class="feedback-sections" id="feedbackSections">
+      <div class="fb-section fb-overall">
+        <div class="fb-section-title">总体表现</div>
+        <div class="fb-section-body" id="fbOverall"></div>
+      </div>
+      <div class="fb-section fb-strength">
+        <div class="fb-section-title">亮点</div>
+        <div class="fb-section-body" id="fbStrength"></div>
+      </div>
+      <div class="fb-section fb-issue">
+        <div class="fb-section-title">主要问题</div>
+        <div class="fb-section-body" id="fbIssue"></div>
+      </div>
+      <div class="fb-section fb-advice">
+        <div class="fb-section-title">改进建议</div>
+        <div class="fb-section-body" id="fbAdvice"></div>
+      </div>
+    </div>
   </div>
 </div>
 </div>
@@ -339,6 +451,7 @@ const questionArea = $("questionArea");
 const transcriptArea = $("transcriptArea");
 const feedbackArea = $("feedbackArea");
 const feedbackCard = $("feedbackCard");
+const feedbackSections = $("feedbackSections");
 const completedSection = $("completedSection");
 const completedList = $("completedList");
 const timerEl = $("timer");
@@ -357,6 +470,12 @@ let pingInterval = null;
 
 let timerInterval = null;
 let timerStart = null;
+let showQuestion = true;
+
+const showQuestionToggle = $("showQuestionToggle");
+showQuestionToggle.addEventListener("change", () => {
+  showQuestion = showQuestionToggle.checked;
+});
 
 function setStatus(state, text) {
   statusDot.className = "status-dot " + state;
@@ -379,12 +498,21 @@ function startTimer() {
   readingHint.classList.remove("visible");
   timerStart = Date.now();
   timerEl.textContent = "00:00";
+  timerEl.style.color = "var(--primary)";
+  timerEl.title = "";
   timerEl.classList.add("visible");
   timerInterval = setInterval(() => {
     const elapsed = Math.floor((Date.now() - timerStart) / 1000);
     const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
     const ss = String(elapsed % 60).padStart(2, "0");
     timerEl.textContent = mm + ":" + ss;
+    if (elapsed >= 300) {
+      timerEl.style.color = "var(--danger)";
+      timerEl.title = "答题时间过长，建议尽快收尾";
+    } else if (elapsed >= 180) {
+      timerEl.style.color = "#f77f00";
+      timerEl.title = "已超过建议时长（3分钟）";
+    }
   }, 1000);
 }
 
@@ -422,6 +550,52 @@ function getElapsedSecs() {
   }
 })();
 
+/* ---------- Friendly date ---------- */
+function friendlyDate(title) {
+  // title format: "2026-04-12 16:24:42"
+  const m = title.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/);
+  if (!m) return title;
+  const [, yr, mo, dy, hh, mm] = m;
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+  const yesterday = new Date(now - 86400000);
+  const yd = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,"0")}-${String(yesterday.getDate()).padStart(2,"0")}`;
+  const dateStr = `${yr}-${mo}-${dy}`;
+  const time = `${hh}:${mm}`;
+  if (dateStr === today) return `今天 ${time}`;
+  if (dateStr === yd) return `昨天 ${time}`;
+  return `${parseInt(mo)}月${parseInt(dy)}日 ${time}`;
+}
+
+/* ---------- Stats panel ---------- */
+async function loadStats() {
+  try {
+    const resp = await fetch("/api/stats");
+    const s = await resp.json();
+    const pct = s.total ? Math.round(s.practiced / s.total * 100) : 0;
+    $("statsTotalText").textContent = `已练 ${s.practiced}/${s.total} · ${pct}%`;
+    $("statsTotalBar").style.width = pct + "%";
+    const catsEl = $("statsCats");
+    catsEl.innerHTML = "";
+    s.categories.forEach(c => {
+      const cpct = c.total ? Math.round(c.practiced / c.total * 100) : 0;
+      const div = document.createElement("div");
+      div.className = "stats-cat";
+      div.innerHTML = `
+        <div class="stats-cat-label">
+          <span>${esc(c.name)}</span>
+          <span>${c.practiced}/${c.total}</span>
+        </div>
+        <div class="stats-cat-bar-wrap">
+          <div class="stats-cat-bar" style="width:${cpct}%"></div>
+        </div>`;
+      catsEl.appendChild(div);
+    });
+  } catch (e) {
+    console.warn("Failed to load stats", e);
+  }
+}
+
 /* ---------- History sidebar ---------- */
 async function loadHistory() {
   try {
@@ -439,7 +613,7 @@ async function loadHistory() {
       let bodyHtml = "";
       r.questions.forEach((q, i) => {
         bodyHtml += `<div class="record-q">
-          <div class="record-q-title">第${i+1}题【${q.category}】</div>
+          <div class="record-q-title">第${i+1}题【${esc(q.category)}】${q.elapsed ? `<span class="record-elapsed"> · ${esc(q.elapsed)}</span>` : ""}</div>
           <div class="record-q-prompt">${esc(q.prompt)}</div>
           <div class="record-q-answer">回答：${esc(q.answer)}</div>`;
         if (q.reference_answer) {
@@ -453,16 +627,36 @@ async function loadHistory() {
       }
       item.innerHTML = `
         <div class="record-header">
-          <span class="record-title">${esc(r.title)}</span>
-          <span class="record-toggle">展开</span>
+          <span class="record-title">${esc(friendlyDate(r.title))}</span>
+          <span style="display:flex;align-items:center;gap:6px">
+            <span class="record-toggle">展开</span>
+            <button type="button" class="record-delete-btn" title="删除记录">×</button>
+          </span>
         </div>
         <div class="record-body">${bodyHtml}</div>`;
       const header = item.querySelector(".record-header");
       const body = item.querySelector(".record-body");
       const toggle = item.querySelector(".record-toggle");
-      header.addEventListener("click", () => {
+      const deleteBtn = item.querySelector(".record-delete-btn");
+      header.addEventListener("click", e => {
+        if (e.target === deleteBtn) return;
         const open = body.classList.toggle("open");
         toggle.textContent = open ? "收起" : "展开";
+      });
+      deleteBtn.addEventListener("click", async e => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!confirm(`确定删除这条记录吗？\n${r.title}`)) return;
+        try {
+          await fetch(`/api/records/${encodeURIComponent(r.filename)}`, { method: "DELETE" });
+          item.remove();
+          if (!historyList.querySelector(".record-item")) {
+            historyEmpty.style.display = "block";
+          }
+          loadStats();
+        } catch (err) {
+          alert("删除失败：" + err);
+        }
       });
       historyList.appendChild(item);
     });
@@ -475,6 +669,30 @@ function esc(s) {
   const d = document.createElement("div");
   d.textContent = s || "";
   return d.innerHTML;
+}
+
+/* ---------- Feedback section parser ---------- */
+function parseFeedbackSections(text) {
+  const tags = ["总体表现", "亮点", "主要问题", "改进建议"];
+  const ids = ["fbOverall", "fbStrength", "fbIssue", "fbAdvice"];
+  const parts = {};
+  let current = null;
+  for (const line of text.split("\n")) {
+    const tagMatch = tags.find(t => line.includes(`[${t}]`));
+    if (tagMatch) {
+      current = tagMatch;
+      parts[current] = (line.replace(`[${current}]`, "").trim());
+    } else if (current) {
+      parts[current] += "\n" + line;
+    }
+  }
+  const filled = tags.filter(t => parts[t] && parts[t].trim());
+  if (filled.length < 2) return; // not enough sections, keep raw text
+  feedbackArea.style.display = "none";
+  tags.forEach((t, i) => {
+    if (parts[t]) $(ids[i]).textContent = parts[t].trim();
+  });
+  feedbackSections.classList.add("visible");
 }
 
 /* ---------- RTVI messaging ---------- */
@@ -502,19 +720,28 @@ function addCompletedQuestion(index, category, prompt, answer) {
     <div class="cq-title">第${index}题【${esc(category)}】</div>
     <div class="cq-prompt">${esc(prompt)}</div>
     <div class="cq-answer-label">我的回答：</div>
-    <div class="cq-answer">${esc(answer)}</div>
-    <div class="cq-ref-label">参考答案：</div>
-    <div class="cq-ref" id="cqRef${index}">生成中...</div>`;
+    <div class="cq-answer">${esc(answer)}</div>`;
   completedList.appendChild(item);
   cqElements[index] = item;
 }
 
 function updateReferenceAnswer(index, text) {
-  const refEl = document.getElementById("cqRef" + index);
-  if (refEl) {
-    refEl.textContent = text;
-    refEl.classList.add("visible");
+  const item = cqElements[index];
+  if (!item) return;
+  // Lazily create ref section the first time answer arrives
+  let refEl = document.getElementById("cqRef" + index);
+  if (!refEl) {
+    const label = document.createElement("div");
+    label.className = "cq-ref-label";
+    label.textContent = "参考答案：";
+    refEl = document.createElement("div");
+    refEl.className = "cq-ref";
+    refEl.id = "cqRef" + index;
+    item.appendChild(label);
+    item.appendChild(refEl);
   }
+  refEl.textContent = text;
+  refEl.classList.add("visible");
 }
 
 /* ---------- Server message handler ---------- */
@@ -528,7 +755,7 @@ function handleServerMessage(msg) {
       case "question":
         currentQuestionMeta = { index: d.index, category: d.category, prompt: d.text };
         questionLabel.textContent = `第${d.index}题【${d.category}】`;
-        questionArea.textContent = d.text;
+        questionArea.textContent = showQuestion ? d.text : "（真实面试模式：题目已隐藏，请认真听题）";
         transcriptArea.textContent = "——";
         readingHint.classList.add("visible");
         timerEl.classList.remove("visible");
@@ -538,7 +765,8 @@ function handleServerMessage(msg) {
         startTimer();
         break;
       case "transcript":
-        transcriptArea.textContent = d.text || "——";
+        // Only update during answering state (btnDone enabled); discard stale frames
+        if (!btnDone.disabled) transcriptArea.textContent = d.text || "——";
         break;
       case "answer_transcript":
         addCompletedQuestion(
@@ -569,21 +797,29 @@ function handleServerMessage(msg) {
         break;
       case "feedback_done":
         feedbackArea.classList.remove("feedback-streaming");
+        parseFeedbackSections(feedbackArea.textContent);
         questionLabel.textContent = "练习完成";
         questionArea.textContent = "本轮练习已结束，总点评和参考答案已生成。";
         progressText.textContent = "已完成";
         for (let i = 0; i < 3; i++) $("step" + i).className = "progress-step done";
         loadHistory();
+        loadStats();
         break;
       case "feedback":
         feedbackCard.classList.add("visible");
         feedbackArea.textContent = d.text;
         feedbackArea.classList.remove("feedback-streaming");
+        parseFeedbackSections(d.text);
         questionLabel.textContent = "练习完成";
         questionArea.textContent = "本轮练习已结束，总点评已生成。";
         progressText.textContent = "已完成";
         for (let i = 0; i < 3; i++) $("step" + i).className = "progress-step done";
         loadHistory();
+        loadStats();
+        break;
+      case "session_ready":
+        btnStart.disabled = false;
+        setStatus("connected", "已就绪，可开始新一轮练习");
         break;
       case "error":
         questionArea.textContent = "出错了：" + (d.text || "未知错误");
@@ -666,6 +902,8 @@ btnStart.addEventListener("click", () => {
   completedSection.classList.remove("visible");
   feedbackCard.classList.remove("visible");
   feedbackArea.textContent = "";
+  feedbackArea.style.display = "";
+  feedbackSections.classList.remove("visible");
   sendRTVIMessage("start_practice");
 });
 
@@ -678,6 +916,7 @@ btnDone.addEventListener("click", () => {
 
 /* ---------- Init ---------- */
 loadHistory();
+loadStats();
 connect();
 </script>
 </body>

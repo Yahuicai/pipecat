@@ -51,7 +51,7 @@ async def generate_reference_answer(
                 {"role": "system", "content": _SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
             ],
-            extra_body={"thinking": {"type": "disabled"}},
+            extra_body={"thinking": {"type": "enabled", "budget_tokens": 4000}},
         )
         answer_text = resp.choices[0].message.content or "参考答案生成失败"
     except Exception as e:

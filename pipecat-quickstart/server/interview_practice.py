@@ -62,6 +62,7 @@ def _save_used_ids(used_ids: set[str]):
 class PracticeSession:
     questions: List[PracticeQuestion]
     answers: List[str] = field(default_factory=list)
+    answer_times: List[int] = field(default_factory=list)
     reference_answers: List[str] = field(default_factory=list)
     final_feedback_requested: bool = False
     final_feedback: str | None = None
@@ -78,10 +79,11 @@ class PracticeSession:
     def is_complete(self) -> bool:
         return len(self.answers) >= self.total_questions
 
-    def record_answer(self, answer: str):
+    def record_answer(self, answer: str, elapsed_secs: int = 0):
         cleaned = answer.strip()
         if cleaned and len(self.answers) < self.total_questions:
             self.answers.append(cleaned)
+            self.answer_times.append(elapsed_secs)
 
     def formatted_history(self) -> str:
         lines = []
@@ -188,9 +190,13 @@ def save_practice_record(session: PracticeSession) -> Path:
     for idx, question in enumerate(session.questions, start=1):
         answer = session.answers[idx - 1] if idx - 1 < len(session.answers) else "用户尚未作答"
         ref = session.reference_answers[idx - 1] if idx - 1 < len(session.reference_answers) else ""
+        elapsed = session.answer_times[idx - 1] if idx - 1 < len(session.answer_times) else 0
         lines.append(f"## 第{idx}题【{question.category}】\n")
         lines.append(f"**题目：** {question.prompt}\n")
         lines.append(f"**回答：** {answer}\n")
+        if elapsed:
+            mm, ss = divmod(elapsed, 60)
+            lines.append(f"**用时：** {mm}分{ss:02d}秒\n")
         if ref:
             lines.append(f"**参考答案：** {ref}\n")
 
@@ -201,6 +207,29 @@ def save_practice_record(session: PracticeSession) -> Path:
 
     filepath.write_text("\n".join(lines), encoding="utf-8")
     return filepath
+
+
+# ---------------------------------------------------------------------------
+# Practice statistics
+# ---------------------------------------------------------------------------
+
+
+def get_practice_stats() -> dict:
+    """返回题库练习进度统计。"""
+    bank = _load_question_bank()
+    used_ids = _load_used_ids()
+
+    category_stats = []
+    total = 0
+    practiced = 0
+    for category, items in bank.items():
+        cat_total = len(items)
+        cat_practiced = sum(1 for q in items if q["id"] in used_ids)
+        category_stats.append({"name": category, "total": cat_total, "practiced": cat_practiced})
+        total += cat_total
+        practiced += cat_practiced
+
+    return {"total": total, "practiced": practiced, "categories": category_stats}
 
 
 # ---------------------------------------------------------------------------
