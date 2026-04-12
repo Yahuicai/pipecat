@@ -174,6 +174,81 @@
   .fb-advice { background: #faf5ff; }
   .fb-advice .fb-section-title { color: #7e22ce; }
 
+  /* ---------- report panel ---------- */
+  .report-panel { display: none; }
+  .report-panel.visible { display: block; }
+
+  .rpt-accordion {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .rpt-acc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    cursor: pointer;
+    user-select: none;
+    background: #fafbfc;
+    transition: background .15s;
+  }
+  .rpt-acc-header:hover { background: #f0f2f5; }
+  .rpt-acc-meta { display: flex; align-items: center; gap: 10px; }
+  .rpt-acc-title { font-weight: 700; font-size: 14px; color: var(--text); }
+  .rpt-acc-time {
+    font-size: 12px; color: var(--text-muted);
+    background: #f0f2f5; padding: 2px 8px; border-radius: 10px;
+  }
+  .rpt-acc-toggle { font-size: 18px; color: var(--text-muted); line-height: 1; }
+  .rpt-acc-body {
+    display: none;
+    border-top: 1px solid var(--border);
+  }
+  .rpt-acc-body.open { display: block; }
+
+  .rpt-row {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .rpt-row:last-child { border-bottom: none; }
+  .rpt-row-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .04em; color: var(--text-muted); margin-bottom: 6px;
+  }
+  .rpt-row-content {
+    font-size: 14px; line-height: 1.75; color: var(--text);
+    white-space: pre-wrap;
+  }
+  .rpt-row-answer .rpt-row-content {
+    background: #f8f9fb; padding: 10px 12px; border-radius: 6px;
+    border-left: 3px solid var(--primary);
+  }
+  .rpt-row-ref .rpt-row-content {
+    background: #ecfdf5; padding: 10px 12px; border-radius: 6px;
+    border-left: 3px solid var(--success); color: #065f46;
+  }
+  .rpt-row-comment .rpt-row-content {
+    background: #eff6ff; padding: 10px 12px; border-radius: 6px;
+    border-left: 3px solid #60a5fa; color: #1e40af;
+  }
+
+  .rpt-summary {
+    border-radius: 10px; padding: 16px 18px; margin-bottom: 12px;
+  }
+  .rpt-summary-label {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .04em; margin-bottom: 8px;
+  }
+  .rpt-summary-body {
+    font-size: 14px; line-height: 1.75; white-space: pre-wrap;
+  }
+  .rpt-overall { background: #eff6ff; border: 1px solid #bfdbfe; }
+  .rpt-overall .rpt-summary-label { color: #1d4ed8; }
+  .rpt-recommendations { background: #faf5ff; border: 1px solid #e9d5ff; }
+  .rpt-recommendations .rpt-summary-label { color: #7e22ce; }
+
   /* ---------- resize handle ---------- */
   .resize-handle {
     width: 5px;
@@ -416,26 +491,14 @@
   </div>
 
   <div class="card feedback-card" id="feedbackCard">
-    <div class="section-title">总点评</div>
+    <div class="section-title">生成报告中...</div>
     <div class="feedback-area" id="feedbackArea"></div>
-    <div class="feedback-sections" id="feedbackSections">
-      <div class="fb-section fb-overall">
-        <div class="fb-section-title">总体表现</div>
-        <div class="fb-section-body" id="fbOverall"></div>
-      </div>
-      <div class="fb-section fb-strength">
-        <div class="fb-section-title">亮点</div>
-        <div class="fb-section-body" id="fbStrength"></div>
-      </div>
-      <div class="fb-section fb-issue">
-        <div class="fb-section-title">主要问题</div>
-        <div class="fb-section-body" id="fbIssue"></div>
-      </div>
-      <div class="fb-section fb-advice">
-        <div class="fb-section-title">改进建议</div>
-        <div class="fb-section-body" id="fbAdvice"></div>
-      </div>
-    </div>
+  </div>
+
+  <div class="card report-panel" id="reportPanel">
+    <div class="section-title" style="margin-bottom:16px">练习报告</div>
+    <div id="reportAccordions"></div>
+    <div id="reportSummary"></div>
   </div>
 </div>
 </div>
@@ -451,8 +514,8 @@ const questionArea = $("questionArea");
 const transcriptArea = $("transcriptArea");
 const feedbackArea = $("feedbackArea");
 const feedbackCard = $("feedbackCard");
-const feedbackSections = $("feedbackSections");
 const completedSection = $("completedSection");
+const reportPanel = $("reportPanel");
 const completedList = $("completedList");
 const timerEl = $("timer");
 const readingHint = $("readingHint");
@@ -671,28 +734,85 @@ function esc(s) {
   return d.innerHTML;
 }
 
-/* ---------- Feedback section parser ---------- */
-function parseFeedbackSections(text) {
-  const tags = ["总体表现", "亮点", "主要问题", "改进建议"];
-  const ids = ["fbOverall", "fbStrength", "fbIssue", "fbAdvice"];
-  const parts = {};
-  let current = null;
-  for (const line of text.split("\n")) {
-    const tagMatch = tags.find(t => line.includes(`[${t}]`));
-    if (tagMatch) {
-      current = tagMatch;
-      parts[current] = (line.replace(`[${current}]`, "").trim());
-    } else if (current) {
-      parts[current] += "\n" + line;
-    }
-  }
-  const filled = tags.filter(t => parts[t] && parts[t].trim());
-  if (filled.length < 2) return; // not enough sections, keep raw text
-  feedbackArea.style.display = "none";
-  tags.forEach((t, i) => {
-    if (parts[t]) $(ids[i]).textContent = parts[t].trim();
+/* ---------- Report panel renderer ---------- */
+function renderReport(data) {
+  // Hide transient session UI
+  completedSection.classList.remove("visible");
+  feedbackCard.classList.remove("visible");
+
+  const accordions = $("reportAccordions");
+  const summary = $("reportSummary");
+  accordions.innerHTML = "";
+  summary.innerHTML = "";
+
+  data.questions.forEach((q, idx) => {
+    const isFirst = idx === 0;
+    const acc = document.createElement("div");
+    acc.className = "rpt-accordion";
+
+    const headerHtml = `
+      <div class="rpt-acc-header">
+        <div class="rpt-acc-meta">
+          <span class="rpt-acc-title">第${q.index}题【${esc(q.category)}】</span>
+          ${q.elapsed_label ? `<span class="rpt-acc-time">${esc(q.elapsed_label)}</span>` : ""}
+        </div>
+        <span class="rpt-acc-toggle">${isFirst ? "▲" : "▼"}</span>
+      </div>`;
+
+    const refRow = q.reference_answer ? `
+      <div class="rpt-row rpt-row-ref">
+        <div class="rpt-row-label">参考答案</div>
+        <div class="rpt-row-content">${esc(q.reference_answer)}</div>
+      </div>` : "";
+
+    const commentRow = q.comment ? `
+      <div class="rpt-row rpt-row-comment">
+        <div class="rpt-row-label">教练点评</div>
+        <div class="rpt-row-content">${esc(q.comment)}</div>
+      </div>` : "";
+
+    acc.innerHTML = `
+      ${headerHtml}
+      <div class="rpt-acc-body ${isFirst ? "open" : ""}">
+        <div class="rpt-row">
+          <div class="rpt-row-label">题目</div>
+          <div class="rpt-row-content">${esc(q.prompt)}</div>
+        </div>
+        <div class="rpt-row rpt-row-answer">
+          <div class="rpt-row-label">我的回答</div>
+          <div class="rpt-row-content">${esc(q.answer || "（未检测到回答）")}</div>
+        </div>
+        ${refRow}
+        ${commentRow}
+      </div>`;
+
+    const header = acc.querySelector(".rpt-acc-header");
+    const body = acc.querySelector(".rpt-acc-body");
+    const toggle = acc.querySelector(".rpt-acc-toggle");
+    header.addEventListener("click", () => {
+      const open = body.classList.toggle("open");
+      toggle.textContent = open ? "▲" : "▼";
+    });
+    accordions.appendChild(acc);
   });
-  feedbackSections.classList.add("visible");
+
+  if (data.overall) {
+    summary.insertAdjacentHTML("beforeend", `
+      <div class="rpt-summary rpt-overall">
+        <div class="rpt-summary-label">总体评价</div>
+        <div class="rpt-summary-body">${esc(data.overall)}</div>
+      </div>`);
+  }
+  if (data.recommendations) {
+    summary.insertAdjacentHTML("beforeend", `
+      <div class="rpt-summary rpt-recommendations">
+        <div class="rpt-summary-label">改进建议</div>
+        <div class="rpt-summary-body">${esc(data.recommendations)}</div>
+      </div>`);
+  }
+
+  reportPanel.classList.add("visible");
+  reportPanel.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 /* ---------- RTVI messaging ---------- */
@@ -797,23 +917,12 @@ function handleServerMessage(msg) {
         break;
       case "feedback_done":
         feedbackArea.classList.remove("feedback-streaming");
-        parseFeedbackSections(feedbackArea.textContent);
-        questionLabel.textContent = "练习完成";
-        questionArea.textContent = "本轮练习已结束，总点评和参考答案已生成。";
+        questionLabel.textContent = "生成报告中...";
         progressText.textContent = "已完成";
         for (let i = 0; i < 3; i++) $("step" + i).className = "progress-step done";
-        loadHistory();
-        loadStats();
         break;
-      case "feedback":
-        feedbackCard.classList.add("visible");
-        feedbackArea.textContent = d.text;
-        feedbackArea.classList.remove("feedback-streaming");
-        parseFeedbackSections(d.text);
-        questionLabel.textContent = "练习完成";
-        questionArea.textContent = "本轮练习已结束，总点评已生成。";
-        progressText.textContent = "已完成";
-        for (let i = 0; i < 3; i++) $("step" + i).className = "progress-step done";
+      case "report":
+        renderReport(d);
         loadHistory();
         loadStats();
         break;
@@ -903,7 +1012,9 @@ btnStart.addEventListener("click", () => {
   feedbackCard.classList.remove("visible");
   feedbackArea.textContent = "";
   feedbackArea.style.display = "";
-  feedbackSections.classList.remove("visible");
+  reportPanel.classList.remove("visible");
+  $("reportAccordions").innerHTML = "";
+  $("reportSummary").innerHTML = "";
   sendRTVIMessage("start_practice");
 });
 

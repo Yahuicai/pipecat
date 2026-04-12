@@ -215,8 +215,8 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# Interview practice runtime data
-server/practice_state.json
-server/practice_records/
+# Interview practice runtime data — tracked intentionally
+# server/practice_state.json
+# server/practice_records/
 
 # Node.js (client/)

@@ -64,6 +64,7 @@ class PracticeSession:
     answers: List[str] = field(default_factory=list)
     answer_times: List[int] = field(default_factory=list)
     reference_answers: List[str] = field(default_factory=list)
+    question_comments: List[str] = field(default_factory=list)
     final_feedback_requested: bool = False
     final_feedback: str | None = None
 
@@ -199,6 +200,11 @@ def save_practice_record(session: PracticeSession) -> Path:
             lines.append(f"**用时：** {mm}分{ss:02d}秒\n")
         if ref:
             lines.append(f"**参考答案：** {ref}\n")
+        comment = (
+            session.question_comments[idx - 1] if idx - 1 < len(session.question_comments) else ""
+        )
+        if comment:
+            lines.append(f"**逐题点评：** {comment}\n")
 
     lines.append("---\n")
     lines.append("## 总点评\n")

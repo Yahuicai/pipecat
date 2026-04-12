@@ -56,8 +56,10 @@ class InterviewController(FrameProcessor):
         self._waiting_for_tts_done: bool = False
         # Pre-fetched reference answers: index -> answer text
         self._ref_answers: dict[int, str] = {}
-        # Background tasks for reference answer fetching
         self._ref_tasks: dict[int, object] = {}
+        # Per-question LLM comments: index -> comment text
+        self._q_comments: dict[int, str] = {}
+        self._q_comment_tasks: dict[int, object] = {}
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
@@ -123,6 +125,8 @@ class InterviewController(FrameProcessor):
         self._waiting_for_tts_done = False
         self._ref_answers.clear()
         self._ref_tasks.clear()
+        self._q_comments.clear()
+        self._q_comment_tasks.clear()
         self._session = build_practice_session()
         self._state = _State.READING_QUESTION
         # Pre-fetch reference answers for all questions in background
@@ -210,11 +214,11 @@ class InterviewController(FrameProcessor):
             )
 
     # ------------------------------------------------------------------
-    # Pre-fetch reference answer (runs in background from question draw)
+    # Pre-fetch reference answer (background, started at question draw)
     # ------------------------------------------------------------------
 
     async def _fetch_ref_answer(self, q, index: int):
-        """Fetch reference answer in background; stored for delivery after feedback."""
+        """Fetch reference answer in background; stored for delivery in final report."""
         try:
             ref = await generate_reference_answer(q, index)
             self._ref_answers[index] = ref.answer
@@ -223,20 +227,64 @@ class InterviewController(FrameProcessor):
             logger.error(f"Reference answer generation failed for Q{index + 1}: {e}")
 
     # ------------------------------------------------------------------
-    # Final feedback (one-shot LLM call outside pipeline)
+    # Per-question comment (started after all answers collected)
+    # ------------------------------------------------------------------
+
+    async def _generate_question_comment(self, q, answer: str, index: int):
+        """Call LLM to generate a per-question comment for one question."""
+        prompt = (
+            f"你是一名广州事业单位面试陪练教练。"
+            f"请对以下一道面试题和考生的回答给出简短点评。\n\n"
+            f"题目【{q.category}】：{q.prompt}\n\n"
+            f"考生回答：{answer}\n\n"
+            "输出要求：\n"
+            "1. 点评内容包括答题表现、优点和不足。\n"
+            "2. 控制在80-120字以内，语气直接、具体。\n"
+            "3. 纯文字输出，不要使用 emoji 或格式符号。\n"
+        )
+        try:
+            client = openai.AsyncOpenAI(
+                api_key=os.getenv("ARK_API_KEY"),
+                base_url=os.getenv("ARK_BASE_URL"),
+            )
+            resp = await client.chat.completions.create(
+                model=os.getenv("ARK_MODEL", "doubao-seed-2-0-pro-260215"),
+                messages=[{"role": "user", "content": prompt}],
+                extra_body={"thinking": {"type": "disabled"}},
+            )
+            comment = (resp.choices[0].message.content or "").strip()
+            self._q_comments[index] = comment
+            logger.info(f"Per-question comment ready for Q{index + 1}")
+        except Exception as e:
+            logger.error(f"Per-question comment failed for Q{index + 1}: {e}")
+            self._q_comments[index] = ""
+
+    # ------------------------------------------------------------------
+    # Final feedback + report assembly
     # ------------------------------------------------------------------
 
     async def _generate_and_deliver_feedback(self):
+        import asyncio
+
+        # Launch per-question comment tasks concurrently (answers now available)
+        for i, q in enumerate(self._session.questions):
+            answer = self._session.answers[i] if i < len(self._session.answers) else ""
+            self._q_comment_tasks[i] = self.create_task(
+                self._generate_question_comment(q, answer, i), f"q_comment_{i}"
+            )
+
+        # Stream overall summary to frontend while background tasks run
         history = self._session.formatted_history()
         prompt = (
             "你是一名广州事业单位面试陪练教练。"
-            "请基于下面三道题和考生回答，给出一次统一总点评。\n\n"
+            "请基于下面三道题和考生回答，给出总体评价和改进建议。\n\n"
             f"{history}\n\n"
             "输出要求：\n"
-            "1. 只输出总点评，按以下四部分顺序输出，每部分前用方括号标记，例如 [总体表现]。\n"
-            "2. 四个部分依次为：[总体表现]、[亮点]、[主要问题]、[改进建议]。\n"
-            "3. 语气像个人陪练教练，直接、具体，不要空泛。\n"
-            "4. 控制在大约300字以内。\n"
+            "1. 只输出两部分，每部分前用方括号标记。\n"
+            "2. [总体评价]：概括三道题的整体表现，约100字。\n"
+            "3. [改进建议]：给出2-3条具体可操作的建议，约100字。\n"
+            "4. 语气像个人陪练教练，直接、具体，不要空泛。\n"
+            "5. 不要使用 emoji、项目符号或 markdown 格式。\n"
         )
 
         feedback_parts: list[str] = []
@@ -261,28 +309,50 @@ class InterviewController(FrameProcessor):
             feedback_parts.append(f"抱歉，总点评生成失败：{e}")
             await self._send_ui({"type": "feedback_chunk", "text": feedback_parts[-1]})
 
-        feedback = "".join(feedback_parts) or "未能生成点评"
+        feedback_text = "".join(feedback_parts)
         await self._send_ui({"type": "feedback_done"})
 
-        # Wait for all reference answer background tasks to complete
-        import asyncio
-        import asyncio as _asyncio
+        # Parse overall + recommendations from streamed text
+        overall, recommendations = self._parse_summary(feedback_text)
 
-        pending = [
-            t for t in self._ref_tasks.values() if isinstance(t, asyncio.Task) and not t.done()
-        ]
+        # Wait for all background tasks (ref answers + per-question comments)
+        all_bg_tasks = list(self._ref_tasks.values()) + list(self._q_comment_tasks.values())
+        pending = [t for t in all_bg_tasks if isinstance(t, asyncio.Task) and not t.done()]
         if pending:
-            await _asyncio.gather(*pending, return_exceptions=True)
+            await asyncio.gather(*pending, return_exceptions=True)
 
-        # Send all reference answers together after feedback
+        # Assemble structured report
         n = len(self._session.questions)
-        for i in range(n):
-            text = self._ref_answers.get(i, "")
-            if text:
-                await self._send_ui({"type": "reference_answer", "index": i + 1, "text": text})
         self._session.reference_answers = [self._ref_answers.get(i, "") for i in range(n)]
+        self._session.question_comments = [self._q_comments.get(i, "") for i in range(n)]
 
-        self._session.final_feedback = feedback
+        report_questions = []
+        for i, q in enumerate(self._session.questions):
+            elapsed = self._session.answer_times[i] if i < len(self._session.answer_times) else 0
+            mm, ss = divmod(elapsed, 60)
+            report_questions.append(
+                {
+                    "index": i + 1,
+                    "category": q.category,
+                    "prompt": q.prompt,
+                    "answer": self._session.answers[i] if i < len(self._session.answers) else "",
+                    "elapsed_secs": elapsed,
+                    "elapsed_label": f"{mm}分{ss:02d}秒",
+                    "reference_answer": self._ref_answers.get(i, ""),
+                    "comment": self._q_comments.get(i, ""),
+                }
+            )
+
+        await self._send_ui(
+            {
+                "type": "report",
+                "questions": report_questions,
+                "overall": overall,
+                "recommendations": recommendations,
+            }
+        )
+
+        self._session.final_feedback = feedback_text
         self._session.final_feedback_requested = True
 
         record_path = save_practice_record(self._session)
@@ -290,8 +360,20 @@ class InterviewController(FrameProcessor):
 
         self._state = _State.FINISHED
         logger.info("Interview practice finished")
-        # Signal frontend to re-enable the start button for a new session
         await self._send_ui({"type": "session_ready"})
+
+    @staticmethod
+    def _parse_summary(text: str) -> tuple[str, str]:
+        """Extract [总体评价] and [改进建议] sections from streamed feedback text."""
+        import re
+
+        parts = re.split(r"\[([^\]]+)\]", text)
+        sections: dict[str, str] = {}
+        for i in range(1, len(parts) - 1, 2):
+            sections[parts[i].strip()] = parts[i + 1].strip() if i + 1 < len(parts) else ""
+        overall = sections.get("总体评价", text.strip())
+        recommendations = sections.get("改进建议", "")
+        return overall, recommendations
 
     # ------------------------------------------------------------------
     # Helper: send JSON to the frontend via data channel
