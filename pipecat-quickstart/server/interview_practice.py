@@ -62,6 +62,7 @@ def _save_used_ids(used_ids: set[str]):
 class PracticeSession:
     questions: List[PracticeQuestion]
     answers: List[str] = field(default_factory=list)
+    reference_answers: List[str] = field(default_factory=list)
     final_feedback_requested: bool = False
     final_feedback: str | None = None
 
@@ -186,9 +187,12 @@ def save_practice_record(session: PracticeSession) -> Path:
 
     for idx, question in enumerate(session.questions, start=1):
         answer = session.answers[idx - 1] if idx - 1 < len(session.answers) else "用户尚未作答"
+        ref = session.reference_answers[idx - 1] if idx - 1 < len(session.reference_answers) else ""
         lines.append(f"## 第{idx}题【{question.category}】\n")
         lines.append(f"**题目：** {question.prompt}\n")
         lines.append(f"**回答：** {answer}\n")
+        if ref:
+            lines.append(f"**参考答案：** {ref}\n")
 
     lines.append("---\n")
     lines.append("## 总点评\n")

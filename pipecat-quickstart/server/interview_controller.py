@@ -12,6 +12,7 @@ from typing import Any
 import openai
 from loguru import logger
 from pipecat.frames.frames import (
+    BotStoppedSpeakingFrame,
     Frame,
     InputTransportMessageFrame,
     OutputTransportMessageUrgentFrame,
@@ -25,6 +26,7 @@ from interview_practice import (
     build_practice_session,
     save_practice_record,
 )
+from reference_answer import generate_all_reference_answers
 
 
 class _State(Enum):
@@ -51,20 +53,30 @@ class InterviewController(FrameProcessor):
         self._state = _State.IDLE
         self._session: PracticeSession | None = None
         self._current_transcript_parts: list[str] = []
+        self._waiting_for_tts_done: bool = False
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
 
-        if direction == FrameDirection.DOWNSTREAM:
-            if isinstance(frame, TranscriptionFrame):
-                await self._handle_transcription(frame)
-                await self.push_frame(frame, direction)
-                return
+        if direction == FrameDirection.UPSTREAM:
+            if isinstance(frame, BotStoppedSpeakingFrame) and self._waiting_for_tts_done:
+                self._waiting_for_tts_done = False
+                self._state = _State.WAITING_ANSWER
+                self._current_transcript_parts.clear()
+                logger.info("TTS finished, starting answer timer")
+                await self._send_ui({"type": "waiting_answer"})
+            await self.push_frame(frame, direction)
+            return
 
-            if isinstance(frame, InputTransportMessageFrame):
-                handled = await self._handle_transport_message(frame.message)
-                if handled:
-                    return
+        if isinstance(frame, TranscriptionFrame):
+            await self._handle_transcription(frame)
+            await self.push_frame(frame, direction)
+            return
+
+        if isinstance(frame, InputTransportMessageFrame):
+            handled = await self._handle_transport_message(frame.message)
+            if handled:
+                return
 
         await self.push_frame(frame, direction)
 
@@ -110,10 +122,17 @@ class InterviewController(FrameProcessor):
             return
 
         answer = " ".join(self._current_transcript_parts).strip() or "（未检测到回答）"
+        q_index = self._session.current_question_index
         self._session.record_answer(answer)
         self._current_transcript_parts.clear()
-        logger.info(
-            f"Answer recorded for Q{self._session.current_question_index}: {answer[:80]}..."
+        logger.info(f"Answer recorded for Q{q_index}: {answer[:80]}...")
+
+        await self._send_ui(
+            {
+                "type": "answer_transcript",
+                "index": q_index + 1,
+                "text": answer,
+            }
         )
 
         if self._session.is_complete:
@@ -161,10 +180,8 @@ class InterviewController(FrameProcessor):
         else:
             tts_text = f"收到，我们进入下一题。第{idx + 1}题，{q.category}类。{q.prompt}"
 
+        self._waiting_for_tts_done = True
         await self.push_frame(TTSSpeakFrame(text=tts_text))
-        self._state = _State.WAITING_ANSWER
-        self._current_transcript_parts.clear()
-        await self._send_ui({"type": "waiting_answer"})
 
     # ------------------------------------------------------------------
     # Transcript accumulation
@@ -185,6 +202,8 @@ class InterviewController(FrameProcessor):
     # ------------------------------------------------------------------
 
     async def _generate_and_deliver_feedback(self):
+        import asyncio
+
         history = self._session.formatted_history()
         prompt = (
             "你是一名广州事业单位面试陪练教练。"
@@ -194,32 +213,56 @@ class InterviewController(FrameProcessor):
             "1. 只输出总点评。\n"
             "2. 总点评按四部分组织：总体表现、亮点、主要问题、改进建议。\n"
             "3. 语气像个人陪练教练，直接、具体，不要空泛。\n"
-            "4. 适合语音播报，控制在大约300字以内。\n"
+            "4. 控制在大约300字以内。\n"
         )
 
+        ref_task = asyncio.create_task(generate_all_reference_answers(self._session.questions))
+
+        feedback_parts: list[str] = []
         try:
-            client = openai.OpenAI(
+            client = openai.AsyncOpenAI(
                 api_key=os.getenv("ARK_API_KEY"),
                 base_url=os.getenv("ARK_BASE_URL"),
             )
-            resp = client.chat.completions.create(
+            stream = await client.chat.completions.create(
                 model=os.getenv("ARK_MODEL", "doubao-seed-2-0-pro-260215"),
                 messages=[{"role": "user", "content": prompt}],
                 extra_body={"thinking": {"type": "disabled"}},
+                stream=True,
             )
-            feedback = resp.choices[0].message.content or "未能生成点评"
+            async for chunk in stream:
+                delta = chunk.choices[0].delta.content or ""
+                if delta:
+                    feedback_parts.append(delta)
+                    await self._send_ui({"type": "feedback_chunk", "text": delta})
         except Exception as e:
             logger.error(f"LLM feedback call failed: {e}")
-            feedback = f"抱歉，总点评生成失败：{e}"
+            feedback_parts.append(f"抱歉，总点评生成失败：{e}")
+            await self._send_ui({"type": "feedback_chunk", "text": feedback_parts[-1]})
+
+        feedback = "".join(feedback_parts) or "未能生成点评"
+        await self._send_ui({"type": "feedback_done"})
+
+        try:
+            ref_answers = await ref_task
+            self._session.reference_answers = [r.answer for r in ref_answers]
+            for r in ref_answers:
+                await self._send_ui(
+                    {
+                        "type": "reference_answer",
+                        "index": r.question_index + 1,
+                        "text": r.answer,
+                    }
+                )
+            logger.info("Reference answers generated successfully")
+        except Exception as e:
+            logger.error(f"Reference answer generation failed: {e}")
 
         self._session.final_feedback = feedback
         self._session.final_feedback_requested = True
 
         record_path = save_practice_record(self._session)
         logger.info(f"Practice record saved to {record_path}")
-
-        await self._send_ui({"type": "feedback", "text": feedback})
-        await self.push_frame(TTSSpeakFrame(text=feedback))
 
         self._state = _State.FINISHED
         logger.info("Interview practice finished")

@@ -3,6 +3,7 @@
 import unittest
 
 from pipecat.frames.frames import (
+    BotStoppedSpeakingFrame,
     InputTransportMessageFrame,
     OutputTransportMessageUrgentFrame,
     TranscriptionFrame,
@@ -26,6 +27,16 @@ def _make_rtvi_client_message(action: str, data=None):
     )
 
 
+async def _start_and_transition_to_waiting(c: InterviewController):
+    """Send start_practice, then simulate TTSStoppedFrame to enter WAITING_ANSWER."""
+    await run_test(c, frames_to_send=[_make_rtvi_client_message("start_practice")])
+    assert c._state == _State.READING_QUESTION
+    assert c._waiting_for_tts_done is True
+    c._state = _State.WAITING_ANSWER
+    c._waiting_for_tts_done = False
+    c._current_transcript_parts.clear()
+
+
 class TestControllerStateMachine(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         _STATE_PATH.unlink(missing_ok=True)
@@ -37,22 +48,40 @@ class TestControllerStateMachine(unittest.IsolatedAsyncioTestCase):
         c = InterviewController()
         self.assertEqual(c._state, _State.IDLE)
 
-    async def test_start_practice_transitions_to_waiting(self):
-        """After start_practice, controller should push TTSSpeakFrame and progress."""
+    async def test_start_practice_transitions_to_reading(self):
+        """After start_practice, controller should be in READING_QUESTION waiting for TTS."""
         c = InterviewController()
         start_msg = _make_rtvi_client_message("start_practice")
 
-        (down, _) = await run_test(
-            c,
-            frames_to_send=[start_msg],
-        )
+        (down, _) = await run_test(c, frames_to_send=[start_msg])
 
-        self.assertIn(c._state, (_State.WAITING_ANSWER, _State.READING_QUESTION))
+        self.assertEqual(c._state, _State.READING_QUESTION)
+        self.assertTrue(c._waiting_for_tts_done)
         tts_frames = [f for f in down if isinstance(f, TTSSpeakFrame)]
         self.assertGreater(len(tts_frames), 0, "Should push TTSSpeakFrame for question")
 
         ui_frames = [f for f in down if isinstance(f, OutputTransportMessageUrgentFrame)]
         self.assertGreater(len(ui_frames), 0, "Should push UI updates")
+
+    async def test_bot_stopped_speaking_transitions_to_waiting_answer(self):
+        """BotStoppedSpeakingFrame upstream should transition to WAITING_ANSWER."""
+        c = InterviewController()
+        start_msg = _make_rtvi_client_message("start_practice")
+        await run_test(c, frames_to_send=[start_msg])
+        self.assertEqual(c._state, _State.READING_QUESTION)
+        self.assertTrue(c._waiting_for_tts_done)
+
+        from pipecat.processors.frame_processor import FrameDirection
+
+        bot_stopped = BotStoppedSpeakingFrame()
+        (down, _) = await run_test(
+            c,
+            frames_to_send=[bot_stopped],
+            frames_to_send_direction=FrameDirection.UPSTREAM,
+        )
+
+        self.assertEqual(c._state, _State.WAITING_ANSWER)
+        self.assertFalse(c._waiting_for_tts_done)
 
     async def test_start_practice_ignored_when_not_idle(self):
         """Double start should not crash or restart."""
@@ -68,35 +97,28 @@ class TestControllerStateMachine(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(tts_frames), 1, "Second start should be ignored")
 
     async def test_transcript_accumulation(self):
-        """After start, transcription frames should be accumulated."""
+        """In WAITING_ANSWER state, transcription frames should be accumulated."""
         c = InterviewController()
-        start = _make_rtvi_client_message("start_practice")
+        await _start_and_transition_to_waiting(c)
+
         t1 = TranscriptionFrame(text="我认为", user_id="u1", timestamp="t1")
         t2 = TranscriptionFrame(text="这个问题很重要", user_id="u1", timestamp="t2")
 
-        await run_test(
-            c,
-            frames_to_send=[start, SleepFrame(sleep=0.05), t1, t2],
-        )
+        await run_test(c, frames_to_send=[t1, t2])
         self.assertEqual(len(c._current_transcript_parts), 2)
         self.assertIn("我认为", c._current_transcript_parts[0])
 
     async def test_done_answering_records_and_moves_to_next(self):
         """done_answering should record answer and read next question."""
         c = InterviewController()
-        start = _make_rtvi_client_message("start_practice")
+        await _start_and_transition_to_waiting(c)
+
         t1 = TranscriptionFrame(text="回答内容", user_id="u1", timestamp="t1")
         done = _make_rtvi_client_message("done_answering")
 
         (down, _) = await run_test(
             c,
-            frames_to_send=[
-                start,
-                SleepFrame(sleep=0.05),
-                t1,
-                SleepFrame(sleep=0.05),
-                done,
-            ],
+            frames_to_send=[t1, SleepFrame(sleep=0.05), done],
         )
 
         self.assertIsNotNone(c._session)
@@ -104,7 +126,7 @@ class TestControllerStateMachine(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(c._session.answers[0], "回答内容")
 
         tts_frames = [f for f in down if isinstance(f, TTSSpeakFrame)]
-        self.assertEqual(len(tts_frames), 2, "Should have intro Q1 + transition Q2")
+        self.assertEqual(len(tts_frames), 1, "Should push TTSSpeakFrame for next question")
 
     async def test_done_answering_ignored_when_not_waiting(self):
         """done_answering in idle state should be a no-op."""
@@ -127,13 +149,10 @@ class TestControllerStateMachine(unittest.IsolatedAsyncioTestCase):
     async def test_transcription_passes_through(self):
         """TranscriptionFrame should be forwarded downstream (for other processors)."""
         c = InterviewController()
-        start = _make_rtvi_client_message("start_practice")
-        t = TranscriptionFrame(text="test", user_id="u1", timestamp="t")
+        await _start_and_transition_to_waiting(c)
 
-        (down, _) = await run_test(
-            c,
-            frames_to_send=[start, SleepFrame(sleep=0.05), t],
-        )
+        t = TranscriptionFrame(text="test", user_id="u1", timestamp="t")
+        (down, _) = await run_test(c, frames_to_send=[t])
         transcriptions = [f for f in down if isinstance(f, TranscriptionFrame)]
         self.assertEqual(len(transcriptions), 1)
 
@@ -162,7 +181,7 @@ class TestControllerUIMessages(unittest.IsolatedAsyncioTestCase):
         types = [m.get("type") for m in ui_messages]
         self.assertIn("progress", types)
         self.assertIn("question", types)
-        self.assertIn("waiting_answer", types)
+        self.assertNotIn("waiting_answer", types, "waiting_answer deferred until TTS completes")
 
 
 if __name__ == "__main__":

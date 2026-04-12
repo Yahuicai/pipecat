@@ -4,6 +4,7 @@ Serves:
   - /            -> redirect to /client/
   - /client/     -> custom interview UI (static files)
   - /api/offer   -> WebRTC signaling (POST = SDP offer, PATCH = ICE candidates)
+  - /api/records -> practice history (GET)
 
 Usage:
     uv run main.py
@@ -11,8 +12,9 @@ Usage:
 """
 
 import argparse
-import asyncio
+import re
 from pathlib import Path
+from typing import Any
 
 import uvicorn
 from dotenv import load_dotenv
@@ -32,6 +34,7 @@ load_dotenv(override=True)
 
 _SERVER_DIR = Path(__file__).resolve().parent
 _CLIENT_DIR = _SERVER_DIR.parent / "client"
+_RECORDS_DIR = _SERVER_DIR / "practice_records"
 
 app = FastAPI(title="Interview Practice Assistant")
 
@@ -67,6 +70,54 @@ async def ice_candidate(request: SmallWebRTCPatchRequest):
     """WebRTC ICE candidate trickle."""
     await small_webrtc_handler.handle_patch_request(request)
     return {"status": "success"}
+
+
+def _parse_record_md(path: Path) -> dict[str, Any]:
+    """Parse a practice record markdown file into structured data."""
+    text = path.read_text(encoding="utf-8")
+    record: dict[str, Any] = {"filename": path.name, "questions": []}
+
+    title_match = re.search(r"^# 面试练习记录 (.+)$", text, re.MULTILINE)
+    record["title"] = title_match.group(1).strip() if title_match else path.stem
+
+    q_blocks = re.split(r"^## 第\d+题", text, flags=re.MULTILINE)[1:]
+    for block in q_blocks:
+        cat_match = re.search(r"【(.+?)】", block)
+        prompt_match = re.search(r"\*\*题目：\*\*\s*(.+)", block)
+        answer_match = re.search(
+            r"\*\*回答：\*\*\s*(.+?)(?=\n\*\*参考答案|\n---|\n## |$)", block, re.DOTALL
+        )
+        ref_match = re.search(r"\*\*参考答案：\*\*\s*(.+?)(?=\n---|\n## |$)", block, re.DOTALL)
+        answer_text = answer_match.group(1).strip() if answer_match else ""
+        ref_text = ref_match.group(1).strip() if ref_match else ""
+        record["questions"].append(
+            {
+                "category": cat_match.group(1) if cat_match else "",
+                "prompt": prompt_match.group(1).strip() if prompt_match else "",
+                "answer": answer_text,
+                "reference_answer": ref_text,
+            }
+        )
+
+    feedback_match = re.search(r"## 总点评\s*\n(.+)", text, re.DOTALL)
+    record["feedback"] = feedback_match.group(1).strip() if feedback_match else ""
+
+    return record
+
+
+@app.get("/api/records")
+async def list_records():
+    """Return all practice records, newest first."""
+    if not _RECORDS_DIR.exists():
+        return []
+    files = sorted(_RECORDS_DIR.glob("*.md"), reverse=True)
+    records = []
+    for f in files:
+        try:
+            records.append(_parse_record_md(f))
+        except Exception as e:
+            logger.warning(f"Failed to parse {f.name}: {e}")
+    return records
 
 
 app.mount("/client", StaticFiles(directory=str(_CLIENT_DIR), html=True), name="client")
