@@ -1,21 +1,9 @@
-#
-# Copyright (c) 2024–2025, Daily
-#
-# SPDX-License-Identifier: BSD 2-Clause License
-#
+"""Interview practice bot -- button-controlled, no VAD auto-trigger.
 
-"""pipecat-quickstart - Pipecat Voice Agent
+Pipeline:  Transport.input() -> STT -> InterviewController -> TTS -> Transport.output()
 
-This bot uses a cascade pipeline: Speech-to-Text → LLM → Text-to-Speech
-
-Required AI services:
-- Deepgram (Speech-to-Text, Chinese)
-- ARK / Doubao pro (LLM, OpenAI-compatible, non-reasoning)
-- MiniMax (Text-to-Speech, Chinese, via WebSocket)
-
-Run the bot using::
-
-    uv run bot.py
+The InterviewController handles all state, reads questions via TTSSpeakFrame
+(no LLM in the main pipeline), and only calls LLM once for the final summary.
 """
 
 import json
@@ -26,43 +14,31 @@ from typing import AsyncGenerator, Optional
 import websockets
 from dotenv import load_dotenv
 from loguru import logger
-from pipecat.audio.vad.silero import SileroVADAnalyzer
-from pipecat.audio.vad.vad_analyzer import VADParams
-from pipecat.frames.frames import ErrorFrame, Frame, LLMRunFrame, StartFrame, TTSAudioRawFrame
+from pipecat.frames.frames import ErrorFrame, Frame, StartFrame, TTSAudioRawFrame
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
 from pipecat.pipeline.task import PipelineParams, PipelineTask
-from pipecat.processors.aggregators.llm_context import LLMContext
-from pipecat.processors.aggregators.llm_response_universal import (
-    LLMContextAggregatorPair,
-    LLMUserAggregatorParams,
-)
-from pipecat.runner.types import DailyRunnerArguments, RunnerArguments, SmallWebRTCRunnerArguments
+from pipecat.runner.types import RunnerArguments, SmallWebRTCRunnerArguments
 from pipecat.services.deepgram.stt import DeepgramSTTService
-from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.services.tts_service import TTSService
 from pipecat.transcriptions.language import Language
 from pipecat.transports.base_transport import BaseTransport, TransportParams
-from pipecat.transports.daily.transport import DailyParams, DailyTransport
 from pipecat.transports.smallwebrtc.connection import SmallWebRTCConnection
 from pipecat.transports.smallwebrtc.transport import SmallWebRTCTransport
 from pipecat.utils.tracing.service_decorators import traced_tts
 
-from interview_practice import (
-    InterviewPracticeProcessor,
-    build_practice_session,
-    build_start_prompt,
-    save_practice_record,
-)
+from interview_controller import InterviewController
 
 load_dotenv(override=True)
 
 
-class MiniMaxWSTTSService(TTSService):
-    """MiniMax TTS via WebSocket API (wss://api.minimaxi.com/ws/v1/t2a_v2).
+# ---------------------------------------------------------------------------
+# MiniMax WebSocket TTS (same as bot.py -- extracted here for reuse)
+# ---------------------------------------------------------------------------
 
-    使用 WebSocket 流式接口，延迟低，适合国内访问。
-    """
+
+class MiniMaxWSTTSService(TTSService):
+    """MiniMax TTS via WebSocket streaming API."""
 
     def __init__(
         self,
@@ -100,16 +76,12 @@ class MiniMaxWSTTSService(TTSService):
     @traced_tts
     async def run_tts(self, text: str, context_id: str) -> AsyncGenerator[Frame, None]:
         logger.debug(f"{self}: Generating TTS via WebSocket [{text}]")
-
         headers = {"Authorization": f"Bearer {self._api_key}"}
 
         try:
             async with websockets.connect(
-                self._ws_url,
-                additional_headers=headers,
-                ssl=self._ssl_ctx,
+                self._ws_url, additional_headers=headers, ssl=self._ssl_ctx
             ) as ws:
-                # task_start
                 await ws.send(
                     json.dumps(
                         {
@@ -130,20 +102,8 @@ class MiniMaxWSTTSService(TTSService):
                         }
                     )
                 )
-
-                # task_continue (send text)
-                await ws.send(
-                    json.dumps(
-                        {
-                            "event": "task_continue",
-                            "text": text,
-                        }
-                    )
-                )
-
-                # task_finish
+                await ws.send(json.dumps({"event": "task_continue", "text": text}))
                 await ws.send(json.dumps({"event": "task_finish"}))
-
                 await self.start_tts_usage_metrics(text)
 
                 async for message in ws:
@@ -154,7 +114,6 @@ class MiniMaxWSTTSService(TTSService):
                         continue
 
                     event = data.get("event", "")
-
                     if event == "task_failed":
                         err = data.get("base_resp", {}).get("status_msg", "unknown error")
                         logger.error(f"{self}: TTS task failed: {err}")
@@ -164,7 +123,6 @@ class MiniMaxWSTTSService(TTSService):
                     if "data" in data:
                         audio_hex = data["data"].get("audio", "")
                         is_final = data["data"].get("is_final", False)
-
                         if audio_hex:
                             try:
                                 audio_bytes = bytes.fromhex(audio_hex)
@@ -177,13 +135,10 @@ class MiniMaxWSTTSService(TTSService):
                                 )
                             except ValueError as e:
                                 logger.error(f"{self}: hex decode error: {e}")
-
                         if is_final:
                             break
-
                     elif event == "task_finished":
                         break
-
         except Exception as e:
             logger.error(f"{self}: WebSocket error: {e}")
             yield ErrorFrame(error=f"MiniMax WS TTS error: {e}", exception=e)
@@ -191,12 +146,15 @@ class MiniMaxWSTTSService(TTSService):
             await self.stop_ttfb_metrics()
 
 
-async def run_bot(transport: BaseTransport):
-    """Main bot logic."""
-    logger.info("Starting bot")
-    practice_session = build_practice_session()
+# ---------------------------------------------------------------------------
+# Pipeline assembly
+# ---------------------------------------------------------------------------
 
-    # Speech-to-Text service - 中文识别
+
+async def run_bot(transport: BaseTransport):
+    """Assemble and run the interview practice pipeline."""
+    logger.info("Starting interview practice bot")
+
     stt = DeepgramSTTService(
         api_key=os.getenv("DEEPGRAM_API_KEY"),
         settings=DeepgramSTTService.Settings(
@@ -205,57 +163,21 @@ async def run_bot(transport: BaseTransport):
         ),
     )
 
-    # Text-to-Speech service - MiniMax WebSocket，支持中文，国内可访问
     tts = MiniMaxWSTTSService(
         api_key=os.getenv("MINIMAX_API_KEY", ""),
         group_id=os.getenv("MINIMAX_GROUP_ID", ""),
-        voice="female-shaonv",  # 可选: male-qn-qingse / female-chengshu
+        voice="female-shaonv",
     )
 
-    # LLM service - 通过 extra_body 关闭推理模型的思考模式，消除 reasoning tokens 延迟
-    llm = OpenAILLMService(
-        api_key=os.getenv("ARK_API_KEY"),
-        base_url=os.getenv("ARK_BASE_URL"),
-        settings=OpenAILLMService.Settings(
-            model=os.getenv("ARK_MODEL", "doubao-seed-2-0-pro-260215"),
-            system_instruction=(
-                "你是一个广州事业单位面试语音陪练助手。你的回复会被直接朗读，"
-                "请避免使用 emoji、列表符号或其他无法朗读的格式。"
-                "用简洁、自然、清晰的中文口语回答。"
-            ),
-            extra={
-                "extra_body": {
-                    "thinking": {"type": "disabled"},
-                }
-            },
-        ),
-    )
+    controller = InterviewController()
 
-    context = LLMContext([{"role": "system", "content": build_start_prompt(practice_session)}])
-    user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
-        context,
-        user_params=LLMUserAggregatorParams(
-            vad_analyzer=SileroVADAnalyzer(
-                params=VADParams(
-                    stop_secs=0.3,  # 默认 0.2，适当增大减少误截断
-                    confidence=0.6,  # 默认 0.7，稍低避免漏检
-                )
-            ),
-        ),
-    )
-    practice_processor = InterviewPracticeProcessor(practice_session)
-
-    # Pipeline - assembled from reusable components
     pipeline = Pipeline(
         [
             transport.input(),
             stt,
-            user_aggregator,
-            practice_processor,
-            llm,
+            controller,
             tts,
             transport.output(),
-            assistant_aggregator,
         ]
     )
 
@@ -265,14 +187,7 @@ async def run_bot(transport: BaseTransport):
             enable_metrics=True,
             enable_usage_metrics=True,
         ),
-        observers=[],
     )
-
-    @task.rtvi.event_handler("on_client_ready")
-    async def on_client_ready(rtvi):
-        for index, question in enumerate(practice_session.questions, start=1):
-            logger.info(f"Question {index} [{question.category}]: {question.prompt}")
-        await task.queue_frames([LLMRunFrame()])
 
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
@@ -283,59 +198,27 @@ async def run_bot(transport: BaseTransport):
         logger.info("Client disconnected")
         await task.cancel()
 
-    @assistant_aggregator.event_handler("on_assistant_turn_stopped")
-    async def on_assistant_turn_stopped(aggregator, message):
-        if (
-            practice_session.final_feedback_requested
-            and practice_session.final_feedback is None
-            and practice_session.is_complete
-        ):
-            practice_session.final_feedback = message.content
-            logger.info("Practice complete")
-            logger.info(practice_session.formatted_history())
-            logger.info(f"Final feedback: {practice_session.final_feedback}")
-            record_path = save_practice_record(practice_session)
-            logger.info(f"Practice record saved to {record_path}")
-
     runner = PipelineRunner(handle_sigint=False)
-
     await runner.run(task)
 
 
+# ---------------------------------------------------------------------------
+# Entry point (called by main.py via runner_args)
+# ---------------------------------------------------------------------------
+
+
 async def bot(runner_args: RunnerArguments):
-    """Main bot entry point."""
+    """Bot entry point -- only supports SmallWebRTC."""
+    if not isinstance(runner_args, SmallWebRTCRunnerArguments):
+        logger.error(f"Unsupported runner arguments type: {type(runner_args)}")
+        return
 
-    transport = None
-
-    match runner_args:
-        case DailyRunnerArguments():
-            transport = DailyTransport(
-                runner_args.room_url,
-                runner_args.token,
-                "Pipecat Bot",
-                params=DailyParams(
-                    audio_in_enabled=True,
-                    audio_out_enabled=True,
-                ),
-            )
-        case SmallWebRTCRunnerArguments():
-            webrtc_connection: SmallWebRTCConnection = runner_args.webrtc_connection
-
-            transport = SmallWebRTCTransport(
-                webrtc_connection=webrtc_connection,
-                params=TransportParams(
-                    audio_in_enabled=True,
-                    audio_out_enabled=True,
-                ),
-            )
-        case _:
-            logger.error(f"Unsupported runner arguments type: {type(runner_args)}")
-            return
-
+    connection: SmallWebRTCConnection = runner_args.webrtc_connection
+    transport = SmallWebRTCTransport(
+        webrtc_connection=connection,
+        params=TransportParams(
+            audio_in_enabled=True,
+            audio_out_enabled=True,
+        ),
+    )
     await run_bot(transport)
-
-
-if __name__ == "__main__":
-    from pipecat.runner.run import main
-
-    main()
