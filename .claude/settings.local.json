@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:platform.minimaxi.com)",
+      "Bash(.venv/bin/python -c \"import websockets; print\\('websockets OK:', websockets.__version__\\)\")",
+      "Bash(uv run:*)",
+      "Bash(git pull:*)",
+      "Bash(git add:*)",
+      "Bash(git fetch:*)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)"
+    ]
+  }
+}
