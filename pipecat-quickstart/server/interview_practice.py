@@ -67,6 +67,7 @@ class PracticeSession:
     question_comments: dict[int, str] = field(default_factory=dict)
     final_feedback_requested: bool = False
     final_feedback: str | None = None
+    chat_history: list[dict] = field(default_factory=list)
 
     @property
     def total_questions(self) -> int:

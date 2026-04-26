@@ -29,64 +29,22 @@
     display: flex;
   }
 
-  /* ---------- left sidebar ---------- */
+  /* ---------- sidebar ---------- */
   .sidebar {
-    width: var(--sidebar-w);
-    min-width: var(--sidebar-min);
-    max-width: var(--sidebar-max);
-    background: var(--card);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    position: sticky;
-    top: 0;
-    flex-shrink: 0;
+    width: var(--sidebar-w); min-width: var(--sidebar-min); max-width: var(--sidebar-max);
+    background: var(--card); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; height: 100vh;
+    position: sticky; top: 0; flex-shrink: 0;
   }
-  .sidebar-header {
-    padding: 20px 16px 12px;
-    font-size: 15px;
-    font-weight: 700;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-  .sidebar-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 8px;
-  }
-  .sidebar-empty {
-    text-align: center;
-    color: var(--text-muted);
-    font-size: 13px;
-    padding: 24px 8px;
-  }
-  .record-item {
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    margin-bottom: 8px;
-    overflow: hidden;
-    font-size: 13px;
-  }
-  .record-header {
-    padding: 10px 12px;
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #fafbfc;
-    user-select: none;
-  }
+  .sidebar-header { padding: 20px 16px 12px; font-size: 15px; font-weight: 700; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+  .sidebar-list { flex: 1; overflow-y: auto; padding: 8px; }
+  .sidebar-empty { text-align: center; color: var(--text-muted); font-size: 13px; padding: 24px 8px; }
+  .record-item { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; overflow: hidden; font-size: 13px; }
+  .record-header { padding: 10px 12px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; background: #fafbfc; user-select: none; }
   .record-header:hover { background: #f0f2f5; }
   .record-title { font-weight: 600; font-size: 12px; }
   .record-toggle { font-size: 11px; color: var(--text-muted); }
-  .record-body {
-    display: none;
-    padding: 10px 12px;
-    border-top: 1px solid var(--border);
-    max-height: 500px;
-    overflow-y: auto;
-  }
+  .record-body { display: none; padding: 10px 12px; border-top: 1px solid var(--border); max-height: 500px; overflow-y: auto; }
   .record-body.open { display: block; }
   .record-q { margin-bottom: 12px; }
   .record-q-title { font-weight: 600; color: var(--primary); margin-bottom: 2px; }
@@ -97,192 +55,61 @@
   .record-feedback-label { font-weight: 600; margin-top: 8px; margin-bottom: 2px; color: var(--danger); }
   .record-feedback { color: var(--text); white-space: pre-wrap; }
   .record-elapsed { font-size: 11px; color: var(--text-muted); }
-  .record-delete-btn {
-    background: none; border: none; cursor: pointer;
-    color: var(--text-muted); font-size: 14px; padding: 0 4px;
-    line-height: 1; transition: color .2s;
-  }
+  .record-delete-btn { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 14px; padding: 0 4px; line-height: 1; transition: color .2s; }
   .record-delete-btn:hover { color: var(--danger); }
 
-  /* ---------- stats panel ---------- */
-  .stats-panel {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-    font-size: 12px;
-  }
-  .stats-title {
-    font-weight: 600;
-    color: var(--text);
-    margin-bottom: 8px;
-    display: flex;
-    justify-content: space-between;
-  }
-  .stats-total-bar-wrap {
-    background: var(--border);
-    border-radius: 4px;
-    height: 8px;
-    margin-bottom: 6px;
-  }
-  .stats-total-bar {
-    background: var(--primary);
-    border-radius: 4px;
-    height: 100%;
-    transition: width .5s;
-  }
+  /* ---------- stats ---------- */
+  .stats-panel { padding: 12px 16px; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .stats-title { font-weight: 600; color: var(--text); margin-bottom: 8px; display: flex; justify-content: space-between; }
+  .stats-total-bar-wrap { background: var(--border); border-radius: 4px; height: 8px; margin-bottom: 6px; }
+  .stats-total-bar { background: var(--primary); border-radius: 4px; height: 100%; transition: width .5s; }
   .stats-cat { margin-bottom: 4px; }
-  .stats-cat-label {
-    display: flex;
-    justify-content: space-between;
-    color: var(--text-muted);
-    margin-bottom: 2px;
-  }
-  .stats-cat-bar-wrap {
-    background: var(--border);
-    border-radius: 3px;
-    height: 5px;
-  }
-  .stats-cat-bar {
-    background: var(--success);
-    border-radius: 3px;
-    height: 100%;
-    transition: width .5s;
-  }
+  .stats-cat-label { display: flex; justify-content: space-between; color: var(--text-muted); margin-bottom: 2px; }
+  .stats-cat-bar-wrap { background: var(--border); border-radius: 3px; height: 5px; }
+  .stats-cat-bar { background: var(--success); border-radius: 3px; height: 100%; transition: width .5s; }
 
-  /* ---------- report panel ---------- */
+  /* ---------- report ---------- */
   .report-panel { display: none; }
   .report-panel.visible { display: block; }
-
-  .rpt-accordion {
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    margin-bottom: 12px;
-    overflow: hidden;
-  }
-  .rpt-acc-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 14px 16px;
-    cursor: pointer;
-    user-select: none;
-    background: #fafbfc;
-    transition: background .15s;
-  }
+  .rpt-accordion { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
+  .rpt-acc-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; cursor: pointer; user-select: none; background: #fafbfc; transition: background .15s; }
   .rpt-acc-header:hover { background: #f0f2f5; }
   .rpt-acc-meta { display: flex; align-items: center; gap: 10px; }
   .rpt-acc-title { font-weight: 700; font-size: 14px; color: var(--text); }
-  .rpt-acc-time {
-    font-size: 12px; color: var(--text-muted);
-    background: #f0f2f5; padding: 2px 8px; border-radius: 10px;
-  }
+  .rpt-acc-time { font-size: 12px; color: var(--text-muted); background: #f0f2f5; padding: 2px 8px; border-radius: 10px; }
   .rpt-acc-toggle { font-size: 18px; color: var(--text-muted); line-height: 1; }
-  .rpt-acc-body {
-    display: none;
-    border-top: 1px solid var(--border);
-  }
+  .rpt-acc-body { display: none; border-top: 1px solid var(--border); }
   .rpt-acc-body.open { display: block; }
-
-  .rpt-row {
-    padding: 12px 16px;
-    border-bottom: 1px solid #f0f0f0;
-  }
+  .rpt-row { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; }
   .rpt-row:last-child { border-bottom: none; }
-  .rpt-row-label {
-    font-size: 11px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .04em; color: var(--text-muted); margin-bottom: 6px;
-  }
-  .rpt-row-content {
-    font-size: 14px; line-height: 1.75; color: var(--text);
-    white-space: pre-wrap;
-  }
-  .rpt-row-answer .rpt-row-content {
-    background: #f8f9fb; padding: 10px 12px; border-radius: 6px;
-    border-left: 3px solid var(--primary);
-  }
-  .rpt-row-ref .rpt-row-content {
-    background: #ecfdf5; padding: 10px 12px; border-radius: 6px;
-    border-left: 3px solid var(--success); color: #065f46;
-  }
-  .rpt-row-comment .rpt-row-content {
-    background: #eff6ff; padding: 10px 12px; border-radius: 6px;
-    border-left: 3px solid #60a5fa; color: #1e40af;
-  }
-
-  .rpt-summary {
-    border-radius: 10px; padding: 16px 18px; margin-bottom: 12px;
-  }
-  .rpt-summary-label {
-    font-size: 11px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: .04em; margin-bottom: 8px;
-  }
-  .rpt-summary-body {
-    font-size: 14px; line-height: 1.75; white-space: pre-wrap;
-  }
+  .rpt-row-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); margin-bottom: 6px; }
+  .rpt-row-content { font-size: 14px; line-height: 1.75; color: var(--text); white-space: pre-wrap; }
+  .rpt-row-answer .rpt-row-content { background: #f8f9fb; padding: 10px 12px; border-radius: 6px; border-left: 3px solid var(--primary); }
+  .rpt-row-ref .rpt-row-content { background: #ecfdf5; padding: 10px 12px; border-radius: 6px; border-left: 3px solid var(--success); color: #065f46; }
+  .rpt-row-comment .rpt-row-content { background: #eff6ff; padding: 10px 12px; border-radius: 6px; border-left: 3px solid #60a5fa; color: #1e40af; }
+  .rpt-summary { border-radius: 10px; padding: 16px 18px; margin-bottom: 12px; }
+  .rpt-summary-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+  .rpt-summary-body { font-size: 14px; line-height: 1.75; white-space: pre-wrap; }
   .rpt-overall { background: #eff6ff; border: 1px solid #bfdbfe; }
   .rpt-overall .rpt-summary-label { color: #1d4ed8; }
   .rpt-recommendations { background: #faf5ff; border: 1px solid #e9d5ff; }
   .rpt-recommendations .rpt-summary-label { color: #7e22ce; }
 
-  /* ---------- resize handle ---------- */
-  .resize-handle {
-    width: 5px;
-    cursor: col-resize;
-    background: transparent;
-    flex-shrink: 0;
-    transition: background .2s;
-    position: relative;
-  }
-  .resize-handle:hover,
-  .resize-handle.active {
-    background: var(--primary);
-    opacity: .3;
-  }
+  /* ---------- resize ---------- */
+  .resize-handle { width: 5px; cursor: col-resize; background: transparent; flex-shrink: 0; transition: background .2s; }
+  .resize-handle:hover, .resize-handle.active { background: var(--primary); opacity: .3; }
 
-  /* ---------- main area ---------- */
-  .main {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-    padding: 32px 24px;
-    overflow-y: auto;
-    height: 100vh;
-  }
+  /* ---------- main ---------- */
+  .main { flex: 1; display: flex; justify-content: center; padding: 32px 24px; overflow-y: auto; height: 100vh; }
   .container { width: 100%; max-width: 720px; }
-
   h1 { font-size: 24px; font-weight: 700; text-align: center; margin-bottom: 24px; }
-
-  .card {
-    background: var(--card);
-    border-radius: var(--radius);
-    box-shadow: 0 2px 12px rgba(0,0,0,.06);
-    padding: 24px;
-    margin-bottom: 16px;
-  }
-
-  .status-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 14px;
-    color: var(--text-muted);
-  }
-  .status-dot {
-    width: 10px; height: 10px;
-    border-radius: 50%;
-    background: #ccc;
-    display: inline-block;
-    margin-right: 6px;
-    transition: background .3s;
-  }
+  .card { background: var(--card); border-radius: var(--radius); box-shadow: 0 2px 12px rgba(0,0,0,.06); padding: 24px; margin-bottom: 16px; }
+  .status-bar { display: flex; align-items: center; justify-content: space-between; font-size: 14px; color: var(--text-muted); }
+  .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #ccc; display: inline-block; margin-right: 6px; transition: background .3s; }
   .status-dot.connected { background: var(--success); }
   .status-dot.error { background: var(--danger); }
-
-  .btn-row { display: flex; gap: 12px; margin-top: 20px; }
-  .btn {
-    flex: 1; padding: 14px 0; font-size: 16px; font-weight: 600;
-    border: none; border-radius: 8px; cursor: pointer;
-    transition: background .2s, opacity .2s;
-  }
+  .btn-row { display: flex; gap: 12px; margin-top: 16px; }
+  .btn { flex: 1; padding: 14px 0; font-size: 16px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer; transition: background .2s, opacity .2s; }
   .btn:disabled { opacity: .4; cursor: not-allowed; }
   .btn-primary { background: var(--primary); color: #fff; }
   .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
@@ -290,160 +117,56 @@
   .btn-danger:hover:not(:disabled) { background: #d63d60; }
   .btn-secondary { background: #e8ecf0; color: var(--text); }
   .btn-secondary:hover:not(:disabled) { background: #d5dce4; }
-
   .section-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: var(--text); }
 
-  /* ---------- thinking phase ---------- */
-  .thinking-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
-  }
-  .countdown {
-    font-size: 32px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    color: var(--primary);
-    letter-spacing: 0.02em;
-  }
+  /* ---------- thinking ---------- */
+  .thinking-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .countdown { font-size: 32px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--primary); letter-spacing: 0.02em; }
   .countdown.warning { color: #f77f00; }
   .countdown.expired { color: var(--danger); }
-  .thinking-desc {
-    font-size: 14px;
-    color: var(--text-muted);
-    line-height: 1.6;
-    margin-bottom: 4px;
-  }
+  .thinking-desc { font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 4px; }
 
-  /* ---------- question cards batch ---------- */
-  #questionsBatch {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
-
-  .qcard {
-    background: var(--card);
-    border-radius: var(--radius);
-    box-shadow: 0 2px 12px rgba(0,0,0,.06);
-    padding: 20px 24px;
-    border: 2px solid transparent;
-    transition: border-color .2s, box-shadow .2s;
-  }
-  .qcard.answering {
-    border-color: var(--primary);
-    box-shadow: 0 4px 20px rgba(67,97,238,.15);
-  }
-  .qcard.answered {
-    opacity: 0.75;
-  }
-
-  .qcard-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 12px;
-    flex-wrap: wrap;
-  }
-  .qcard-num {
-    font-weight: 700;
-    font-size: 14px;
-    color: var(--text);
-  }
-  .qcard-cat {
-    font-size: 12px;
-    color: var(--primary);
-    background: #eff6ff;
-    padding: 2px 10px;
-    border-radius: 10px;
-  }
-  .qcard-status {
-    font-size: 12px;
-    padding: 2px 10px;
-    border-radius: 10px;
-    margin-left: auto;
-    font-weight: 600;
-  }
+  /* ---------- question cards ---------- */
+  #questionsBatch { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+  .qcard { background: var(--card); border-radius: var(--radius); box-shadow: 0 2px 12px rgba(0,0,0,.06); padding: 20px 24px; border: 2px solid transparent; transition: border-color .2s, box-shadow .2s; }
+  .qcard.answering { border-color: var(--primary); box-shadow: 0 4px 20px rgba(67,97,238,.15); }
+  .qcard.answered { opacity: 0.75; }
+  .qcard-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .qcard-num { font-weight: 700; font-size: 14px; color: var(--text); }
+  .qcard-cat { font-size: 12px; color: var(--primary); background: #eff6ff; padding: 2px 10px; border-radius: 10px; }
+  .qcard-status { font-size: 12px; padding: 2px 10px; border-radius: 10px; margin-left: auto; font-weight: 600; }
   .qcard-status--pending { color: var(--text-muted); background: #f0f2f5; }
   .qcard-status--answering { color: var(--primary); background: #eff6ff; }
   .qcard-status--answered { color: #059669; background: #ecfdf5; }
-
-  .qcard-text {
-    font-size: 15px;
-    line-height: 1.75;
-    color: var(--text);
-    padding: 14px 16px;
-    background: #fafbfc;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    margin-bottom: 14px;
-  }
-
-  .qcard-footer {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 12px;
-  }
-  .qcard-timer {
-    font-size: 14px;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: var(--primary);
-    display: none;
-  }
-  .qcard-timer.visible { display: inline-block; }
-  .qcard-start-btn {
-    flex: 0 !important;
-    padding: 10px 24px !important;
-    font-size: 14px !important;
-  }
-
-  /* ---------- active answer section ---------- */
+  .qcard-text { font-size: 15px; line-height: 1.75; color: var(--text); padding: 14px 16px; background: #fafbfc; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; }
+  .qcard-transcript-wrap { margin-bottom: 12px; }
   .transcript-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
-  .transcript-area {
-    font-size: 13px; color: var(--text-muted);
-    min-height: 60px; padding: 12px;
-    border: 1px dashed var(--border); border-radius: 8px;
-    white-space: pre-wrap;
-  }
-  .soft-warn {
-    font-size: 12px;
-    color: #f77f00;
-    margin-top: 6px;
-    display: none;
-  }
+  .transcript-area { font-size: 13px; color: var(--text-muted); min-height: 40px; padding: 12px; border: 1px dashed var(--border); border-radius: 8px; white-space: pre-wrap; }
+  .soft-warn { font-size: 12px; color: #f77f00; margin-top: 6px; display: none; }
   .soft-warn.visible { display: block; }
+  .qcard-footer { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+  .qcard-timer { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--primary); display: none; }
+  .qcard-timer.visible { display: inline-block; }
+  .qcard-start-btn { flex: 0 !important; padding: 10px 24px !important; font-size: 14px !important; }
 
-  /* ---------- feedback card ---------- */
+  /* ---------- feedback ---------- */
   .feedback-card { display: none; }
   .feedback-card.visible { display: block; }
-  .feedback-area {
-    min-height: 100px;
-    font-size: 15px;
-    line-height: 1.8;
-    white-space: pre-wrap;
-    padding: 16px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: #fafbfc;
-  }
-  .feedback-streaming::after {
-    content: "▌";
-    animation: blink 1s steps(2) infinite;
-  }
+  .feedback-area { min-height: 100px; font-size: 15px; line-height: 1.8; white-space: pre-wrap; padding: 16px; border: 1px solid var(--border); border-radius: 8px; background: #fafbfc; }
+  .feedback-streaming::after { content: "▌"; animation: blink 1s steps(2) infinite; }
   @keyframes blink { 0% { opacity: 1; } 100% { opacity: 0; } }
+
+  /* ---------- chat ---------- */
+  .chat-history { max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+  .chat-msg { max-width: 82%; padding: 10px 14px; border-radius: 12px; font-size: 14px; line-height: 1.65; white-space: pre-wrap; }
+  .chat-msg--user { align-self: flex-end; background: #f0f2f5; color: var(--text); border-bottom-right-radius: 4px; }
+  .chat-msg--bot { align-self: flex-start; background: #eff6ff; color: #1e40af; border-bottom-left-radius: 4px; }
+  .chat-streaming::after { content: "▌"; animation: blink 1s steps(2) infinite; }
+  .chat-live-transcript { font-size: 13px; color: var(--text-muted); padding: 8px 12px; border: 1px dashed var(--border); border-radius: 8px; margin-bottom: 4px; min-height: 36px; }
 
   @media (max-width: 768px) {
     body { flex-direction: column; }
-    .sidebar {
-      width: 100% !important; min-width: 100% !important; max-width: 100% !important;
-      height: auto; max-height: 40vh;
-      position: relative; border-right: none;
-      border-bottom: 1px solid var(--border);
-    }
+    .sidebar { width: 100% !important; min-width: 100% !important; max-width: 100% !important; height: auto; max-height: 40vh; position: relative; border-right: none; border-bottom: 1px solid var(--border); }
     .resize-handle { display: none; }
     .main { height: auto; min-height: 60vh; }
   }
@@ -459,9 +182,7 @@
       <span>题库覆盖</span>
       <span id="statsTotalText" style="color:var(--text-muted)">加载中...</span>
     </div>
-    <div class="stats-total-bar-wrap">
-      <div class="stats-total-bar" id="statsTotalBar" style="width:0%"></div>
-    </div>
+    <div class="stats-total-bar-wrap"><div class="stats-total-bar" id="statsTotalBar" style="width:0%"></div></div>
     <div id="statsCats"></div>
   </div>
   <div class="sidebar-list" id="historyList">
@@ -469,7 +190,6 @@
   </div>
 </aside>
 
-<!-- ====== RESIZE HANDLE ====== -->
 <div class="resize-handle" id="resizeHandle"></div>
 
 <!-- ====== MAIN AREA ====== -->
@@ -477,7 +197,7 @@
 <div class="container">
   <h1>面试练习助手</h1>
 
-  <!-- Status bar -->
+  <!-- Status -->
   <div class="card">
     <div class="status-bar">
       <span><span class="status-dot" id="statusDot"></span><span id="statusText">未连接</span></span>
@@ -485,50 +205,50 @@
     </div>
   </div>
 
-  <!-- Pre-session: start button -->
+  <!-- Start card -->
   <div class="card" id="startCard">
     <div class="btn-row" style="margin-top:0">
       <button type="button" class="btn btn-primary" id="btnStart" disabled>开始练习</button>
     </div>
   </div>
 
-  <!-- Thinking phase card (shown after start_practice) -->
+  <!-- Thinking phase -->
   <div class="card" id="thinkingCard" style="display:none">
     <div class="thinking-header">
       <span class="section-title" style="margin-bottom:0">思考时间</span>
       <span class="countdown" id="countdownEl">10:00</span>
     </div>
     <p class="thinking-desc">请仔细阅读以下三道题，思考答题思路。倒计时结束或点击下方按钮后可开始作答。</p>
-    <div class="btn-row" style="margin-top:14px">
+    <div class="btn-row">
       <button type="button" class="btn btn-secondary" id="btnSkipThinking">我已准备好，立即开始作答</button>
     </div>
   </div>
 
-  <!-- 3 question cards (rendered dynamically) -->
+  <!-- Question cards -->
   <div id="questionsBatch" style="display:none"></div>
 
-  <!-- Active answer section (shown when answering a question) -->
-  <div class="card" id="activeAnswerCard" style="display:none">
-    <div class="section-title" id="activeQLabel" style="margin-bottom:8px"></div>
-    <div class="transcript-label">实时语音识别：</div>
-    <div class="transcript-area" id="transcriptArea">——</div>
-    <div class="soft-warn" id="softWarn">答题时间较长，建议尽快收尾</div>
-    <div class="btn-row">
-      <button type="button" class="btn btn-danger" id="btnDone" disabled>答题完毕</button>
-    </div>
-  </div>
-
-  <!-- Feedback streaming card -->
+  <!-- Feedback streaming -->
   <div class="card feedback-card" id="feedbackCard">
     <div class="section-title">生成报告中...</div>
     <div class="feedback-area" id="feedbackArea"></div>
   </div>
 
-  <!-- Final report panel -->
+  <!-- Report -->
   <div class="card report-panel" id="reportPanel">
     <div class="section-title" style="margin-bottom:16px">练习报告</div>
     <div id="reportAccordions"></div>
     <div id="reportSummary"></div>
+  </div>
+
+  <!-- Post-report chat -->
+  <div class="card" id="chatCard" style="display:none">
+    <div class="section-title">和教练聊聊本次练习</div>
+    <div class="chat-history" id="chatHistory"></div>
+    <div class="chat-live-transcript" id="chatLiveTranscript" style="display:none">——</div>
+    <div class="btn-row" style="margin-top:0">
+      <button type="button" class="btn btn-primary" id="btnChatStart">开始对话</button>
+      <button type="button" class="btn btn-danger" id="btnChatStop" style="display:none">停止说话</button>
+    </div>
   </div>
 </div>
 </div>
@@ -536,33 +256,32 @@
 <script>
 const $ = id => document.getElementById(id);
 
-const statusDot = $("statusDot");
-const statusText = $("statusText");
-const progressText = $("progressText");
-const feedbackArea = $("feedbackArea");
-const feedbackCard = $("feedbackCard");
-const reportPanel = $("reportPanel");
-const transcriptArea = $("transcriptArea");
-const btnStart = $("btnStart");
-const btnDone = $("btnDone");
-const historyList = $("historyList");
-const historyEmpty = $("historyEmpty");
-const sidebar = $("sidebar");
-const resizeHandle = $("resizeHandle");
+const statusDot     = $("statusDot");
+const statusText    = $("statusText");
+const progressText  = $("progressText");
+const feedbackArea  = $("feedbackArea");
+const feedbackCard  = $("feedbackCard");
+const reportPanel   = $("reportPanel");
+const historyList   = $("historyList");
+const historyEmpty  = $("historyEmpty");
+const sidebar       = $("sidebar");
+const resizeHandle  = $("resizeHandle");
+const btnStart      = $("btnStart");
+const btnChatStart  = $("btnChatStart");
+const btnChatStop   = $("btnChatStop");
 
-let pc = null;
-let dc = null;
-let localStream = null;
-let pingInterval = null;
+let pc = null, dc = null, localStream = null, pingInterval = null;
 
 // Session state
 let questionsBatch = [];
 let thinkingTimerInterval = null;
-let thinkingUnlocked = false;
 let activeQuestionIdx = null;  // 0-based
 let answeredSet = new Set();
 
-// Per-question answer timer (one active at a time)
+// Chat state
+let chatListening = false;
+
+// Per-question answer timer
 let timerInterval = null;
 let timerStart = null;
 
@@ -571,36 +290,26 @@ function setStatus(state, text) {
   statusText.textContent = text;
 }
 
-/* ---------- Countdown (thinking phase) ---------- */
+/* ---------- Countdown ---------- */
 function startCountdown(totalSecs) {
   const endAt = Date.now() + totalSecs * 1000;
   const el = $("countdownEl");
-
   function tick() {
     const remaining = Math.max(0, Math.floor((endAt - Date.now()) / 1000));
     const mm = String(Math.floor(remaining / 60)).padStart(2, "0");
     const ss = String(remaining % 60).padStart(2, "0");
     el.textContent = mm + ":" + ss;
     el.className = "countdown" + (remaining <= 60 ? " warning" : "") + (remaining === 0 ? " expired" : "");
-    if (remaining === 0) {
-      clearInterval(thinkingTimerInterval);
-      thinkingTimerInterval = null;
-      enableAnswerButtons();
-    }
+    if (remaining === 0) { clearInterval(thinkingTimerInterval); thinkingTimerInterval = null; enableAnswerButtons(); }
   }
   tick();
   thinkingTimerInterval = setInterval(tick, 1000);
 }
 
 function enableAnswerButtons() {
-  if (thinkingTimerInterval) {
-    clearInterval(thinkingTimerInterval);
-    thinkingTimerInterval = null;
-  }
-  thinkingUnlocked = true;
+  if (thinkingTimerInterval) { clearInterval(thinkingTimerInterval); thinkingTimerInterval = null; }
   $("thinkingCard").style.display = "none";
   progressText.textContent = "请选择题目开始作答";
-  // Enable start buttons for all unanswered questions
   questionsBatch.forEach(q => {
     const idx = q.index - 1;
     if (!answeredSet.has(idx)) {
@@ -615,7 +324,6 @@ function renderQuestionsBatch(questions, thinkingSecs) {
   questionsBatch = questions;
   const container = $("questionsBatch");
   container.innerHTML = "";
-
   questions.forEach(q => {
     const idx = q.index - 1;
     const card = document.createElement("div");
@@ -628,16 +336,18 @@ function renderQuestionsBatch(questions, thinkingSecs) {
         '<span class="qcard-status qcard-status--pending" id="qcard-status-' + idx + '">待答</span>' +
       '</div>' +
       '<div class="qcard-text">' + esc(q.text) + '</div>' +
+      '<div class="qcard-transcript-wrap" id="qcard-trans-wrap-' + idx + '" style="display:none">' +
+        '<div class="transcript-label">实时语音识别：</div>' +
+        '<div class="transcript-area" id="qcard-transcript-' + idx + '">——</div>' +
+        '<div class="soft-warn" id="qcard-softwarn-' + idx + '">答题时间较长，建议尽快收尾</div>' +
+      '</div>' +
       '<div class="qcard-footer">' +
         '<span class="qcard-timer" id="qcard-timer-' + idx + '"></span>' +
         '<button type="button" class="btn btn-primary qcard-start-btn" id="qcard-btn-' + idx + '" disabled>开始答题</button>' +
       '</div>';
-
-    const btn = card.querySelector("#qcard-btn-" + idx);
-    btn.addEventListener("click", () => startQuestion(q.index));
+    card.querySelector("#qcard-btn-" + idx).onclick = () => startQuestion(q.index);
     container.appendChild(card);
   });
-
   $("startCard").style.display = "none";
   $("questionsBatch").style.display = "flex";
   $("thinkingCard").style.display = "block";
@@ -645,25 +355,21 @@ function renderQuestionsBatch(questions, thinkingSecs) {
 }
 
 function startQuestion(qIndex) {
-  // qIndex is 1-based
   sendRTVIMessage("start_question", { index: qIndex });
+}
+
+function doneAnsweringClick() {
+  if (activeQuestionIdx === null) return;
+  const btn = $("qcard-btn-" + activeQuestionIdx);
+  if (btn) btn.disabled = true;
+  sendRTVIMessage("done_answering", { elapsed_secs: getElapsedSecs() });
 }
 
 function onWaitingAnswer(qIndex) {
   const idx = qIndex - 1;
   activeQuestionIdx = idx;
 
-  // Update card appearance
-  const card = $("qcard-" + idx);
-  if (card) {
-    card.className = "qcard answering";
-    const status = $("qcard-status-" + idx);
-    if (status) { status.className = "qcard-status qcard-status--answering"; status.textContent = "答题中"; }
-    const btn = $("qcard-btn-" + idx);
-    if (btn) btn.disabled = true;
-  }
-
-  // Disable other unanswered cards' buttons while answering
+  // Disable other cards' buttons while answering
   questionsBatch.forEach(q => {
     const otherIdx = q.index - 1;
     if (otherIdx !== idx && !answeredSet.has(otherIdx)) {
@@ -672,36 +378,56 @@ function onWaitingAnswer(qIndex) {
     }
   });
 
-  // Show active answer section
-  $("activeAnswerCard").style.display = "block";
-  $("activeQLabel").textContent = "第" + qIndex + "题 · 作答中";
-  transcriptArea.textContent = "——";
-  $("softWarn").classList.remove("visible");
-  btnDone.disabled = false;
+  // Toggle this card's button to "停止答题"
+  const card = $("qcard-" + idx);
+  if (card) {
+    card.className = "qcard answering";
+    const status = $("qcard-status-" + idx);
+    if (status) { status.className = "qcard-status qcard-status--answering"; status.textContent = "答题中"; }
+    const btn = $("qcard-btn-" + idx);
+    if (btn) {
+      btn.className = "btn btn-danger qcard-start-btn";
+      btn.textContent = "停止答题";
+      btn.disabled = false;
+      btn.onclick = () => doneAnsweringClick();
+    }
+  }
 
-  // Start per-question elapsed timer
+  // Show in-card transcript area
+  const wrap = $("qcard-trans-wrap-" + idx);
+  if (wrap) {
+    wrap.style.display = "block";
+    const ta = $("qcard-transcript-" + idx);
+    if (ta) ta.textContent = "——";
+    const sw = $("qcard-softwarn-" + idx);
+    if (sw) sw.classList.remove("visible");
+  }
+
+  // Start per-question timer
   startAnswerTimer(idx);
 }
 
-function onAnswerTranscript(qIndex, text) {
+function onAnswerTranscript(qIndex) {
   const idx = qIndex - 1;
   answeredSet.add(idx);
   stopAnswerTimer();
 
-  // Mark card as answered
   const card = $("qcard-" + idx);
   if (card) {
     card.className = "qcard answered";
     const status = $("qcard-status-" + idx);
     if (status) { status.className = "qcard-status qcard-status--answered"; status.textContent = "已答"; }
     const btn = $("qcard-btn-" + idx);
-    if (btn) { btn.disabled = true; btn.textContent = "已完成"; }
-    // Keep timer visible with final elapsed time
+    if (btn) { btn.className = "btn btn-secondary qcard-start-btn"; btn.textContent = "已完成"; btn.disabled = true; }
+    // Keep timer visible with final elapsed
     const timerEl = $("qcard-timer-" + idx);
     if (timerEl) timerEl.classList.add("visible");
+    // Hide transcript area
+    const wrap = $("qcard-trans-wrap-" + idx);
+    if (wrap) wrap.style.display = "none";
   }
 
-  // Re-enable unanswered cards' buttons
+  // Re-enable unanswered cards
   questionsBatch.forEach(q => {
     const otherIdx = q.index - 1;
     if (!answeredSet.has(otherIdx)) {
@@ -710,23 +436,16 @@ function onAnswerTranscript(qIndex, text) {
     }
   });
 
-  // Hide active answer section
-  $("activeAnswerCard").style.display = "none";
-  btnDone.disabled = true;
-  transcriptArea.textContent = "——";
   activeQuestionIdx = null;
-
-  // Update progress indicator
   progressText.textContent = "已完成 " + answeredSet.size + " / " + questionsBatch.length + " 题";
 }
 
-/* ---------- Per-question answer timer ---------- */
+/* ---------- Answer timer ---------- */
 function startAnswerTimer(idx) {
   stopAnswerTimer();
   timerStart = Date.now();
   const timerEl = $("qcard-timer-" + idx);
   if (timerEl) { timerEl.textContent = "00:00"; timerEl.style.color = "var(--primary)"; timerEl.classList.add("visible"); }
-
   timerInterval = setInterval(() => {
     const elapsed = Math.floor((Date.now() - timerStart) / 1000);
     const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
@@ -737,7 +456,7 @@ function startAnswerTimer(idx) {
       else if (elapsed >= 180) timerEl.style.color = "#f77f00";
       else timerEl.style.color = "var(--primary)";
     }
-    if (elapsed === 240) $("softWarn").classList.add("visible");
+    if (elapsed === 240) { const sw = $("qcard-softwarn-" + idx); if (sw) sw.classList.add("visible"); }
   }, 1000);
 }
 
@@ -750,13 +469,34 @@ function getElapsedSecs() {
   return timerStart ? Math.floor((Date.now() - timerStart) / 1000) : 0;
 }
 
-/* ---------- Resize sidebar ---------- */
+/* ---------- Chat helpers ---------- */
+function appendChatMsg(role, text) {
+  const history = $("chatHistory");
+  const div = document.createElement("div");
+  div.className = "chat-msg chat-msg--" + role;
+  div.textContent = text;
+  history.appendChild(div);
+  history.scrollTop = history.scrollHeight;
+  return div;
+}
+
+function appendChatChunk(text) {
+  const history = $("chatHistory");
+  let last = history.querySelector(".chat-msg--bot:last-child");
+  if (!last || !last.classList.contains("chat-streaming")) {
+    last = document.createElement("div");
+    last.className = "chat-msg chat-msg--bot chat-streaming";
+    history.appendChild(last);
+  }
+  last.textContent += text;
+  history.scrollTop = history.scrollHeight;
+}
+
+/* ---------- Resize ---------- */
 (function initResize() {
   let startX, startW;
   resizeHandle.addEventListener("mousedown", e => {
-    e.preventDefault();
-    startX = e.clientX;
-    startW = sidebar.offsetWidth;
+    e.preventDefault(); startX = e.clientX; startW = sidebar.offsetWidth;
     resizeHandle.classList.add("active");
     document.addEventListener("mousemove", onMove);
     document.addEventListener("mouseup", onUp);
@@ -765,14 +505,9 @@ function getElapsedSecs() {
     const delta = e.clientX - startX;
     const minW = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--sidebar-min"));
     const maxW = parseInt(getComputedStyle(document.documentElement).getPropertyValue("--sidebar-max"));
-    const newW = Math.max(minW, Math.min(maxW, startW + delta));
-    sidebar.style.width = newW + "px";
+    sidebar.style.width = Math.max(minW, Math.min(maxW, startW + delta)) + "px";
   }
-  function onUp() {
-    resizeHandle.classList.remove("active");
-    document.removeEventListener("mousemove", onMove);
-    document.removeEventListener("mouseup", onUp);
-  }
+  function onUp() { resizeHandle.classList.remove("active"); document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); }
 })();
 
 /* ---------- Friendly date ---------- */
@@ -785,13 +520,12 @@ function friendlyDate(title) {
   const yesterday = new Date(now - 86400000);
   const yd = `${yesterday.getFullYear()}-${String(yesterday.getMonth()+1).padStart(2,"0")}-${String(yesterday.getDate()).padStart(2,"0")}`;
   const dateStr = `${yr}-${mo}-${dy}`;
-  const time = `${hh}:${mm}`;
-  if (dateStr === today) return `今天 ${time}`;
-  if (dateStr === yd) return `昨天 ${time}`;
-  return `${parseInt(mo)}月${parseInt(dy)}日 ${time}`;
+  if (dateStr === today) return `今天 ${hh}:${mm}`;
+  if (dateStr === yd) return `昨天 ${hh}:${mm}`;
+  return `${parseInt(mo)}月${parseInt(dy)}日 ${hh}:${mm}`;
 }
 
-/* ---------- Stats panel ---------- */
+/* ---------- Stats ---------- */
 async function loadStats() {
   try {
     const resp = await fetch("/api/stats");
@@ -805,30 +539,18 @@ async function loadStats() {
       const cpct = c.total ? Math.round(c.practiced / c.total * 100) : 0;
       const div = document.createElement("div");
       div.className = "stats-cat";
-      div.innerHTML = `
-        <div class="stats-cat-label">
-          <span>${esc(c.name)}</span>
-          <span>${c.practiced}/${c.total}</span>
-        </div>
-        <div class="stats-cat-bar-wrap">
-          <div class="stats-cat-bar" style="width:${cpct}%"></div>
-        </div>`;
+      div.innerHTML = `<div class="stats-cat-label"><span>${esc(c.name)}</span><span>${c.practiced}/${c.total}</span></div><div class="stats-cat-bar-wrap"><div class="stats-cat-bar" style="width:${cpct}%"></div></div>`;
       catsEl.appendChild(div);
     });
-  } catch (e) {
-    console.warn("Failed to load stats", e);
-  }
+  } catch (e) { console.warn("Failed to load stats", e); }
 }
 
-/* ---------- History sidebar ---------- */
+/* ---------- History ---------- */
 async function loadHistory() {
   try {
     const resp = await fetch("/api/records");
     const records = await resp.json();
-    if (!records.length) {
-      historyEmpty.style.display = "block";
-      return;
-    }
+    if (!records.length) { historyEmpty.style.display = "block"; return; }
     historyEmpty.style.display = "none";
     historyList.querySelectorAll(".record-item").forEach(el => el.remove());
     records.forEach(r => {
@@ -836,157 +558,75 @@ async function loadHistory() {
       item.className = "record-item";
       let bodyHtml = "";
       r.questions.forEach((q, i) => {
-        bodyHtml += `<div class="record-q">
-          <div class="record-q-title">第${i+1}题【${esc(q.category)}】${q.elapsed ? `<span class="record-elapsed"> · ${esc(q.elapsed)}</span>` : ""}</div>
-          <div class="record-q-prompt">${esc(q.prompt)}</div>
-          <div class="record-q-answer">回答：${esc(q.answer)}</div>`;
-        if (q.reference_answer) {
-          bodyHtml += `<div class="record-q-ref-label">参考答案：</div>
-            <div class="record-q-ref">${esc(q.reference_answer)}</div>`;
-        }
+        bodyHtml += `<div class="record-q"><div class="record-q-title">第${i+1}题【${esc(q.category)}】${q.elapsed ? `<span class="record-elapsed"> · ${esc(q.elapsed)}</span>` : ""}</div><div class="record-q-prompt">${esc(q.prompt)}</div><div class="record-q-answer">回答：${esc(q.answer)}</div>`;
+        if (q.reference_answer) bodyHtml += `<div class="record-q-ref-label">参考答案：</div><div class="record-q-ref">${esc(q.reference_answer)}</div>`;
         bodyHtml += `</div>`;
       });
-      if (r.feedback) {
-        bodyHtml += `<div class="record-feedback-label">总点评</div><div class="record-feedback">${esc(r.feedback)}</div>`;
-      }
-      item.innerHTML = `
-        <div class="record-header">
-          <span class="record-title">${esc(friendlyDate(r.title))}</span>
-          <span style="display:flex;align-items:center;gap:6px">
-            <span class="record-toggle">展开</span>
-            <button type="button" class="record-delete-btn" title="删除记录">×</button>
-          </span>
-        </div>
-        <div class="record-body">${bodyHtml}</div>`;
+      if (r.feedback) bodyHtml += `<div class="record-feedback-label">总点评</div><div class="record-feedback">${esc(r.feedback)}</div>`;
+      item.innerHTML = `<div class="record-header"><span class="record-title">${esc(friendlyDate(r.title))}</span><span style="display:flex;align-items:center;gap:6px"><span class="record-toggle">展开</span><button type="button" class="record-delete-btn" title="删除">×</button></span></div><div class="record-body">${bodyHtml}</div>`;
       const header = item.querySelector(".record-header");
       const body = item.querySelector(".record-body");
       const toggle = item.querySelector(".record-toggle");
       const deleteBtn = item.querySelector(".record-delete-btn");
-      header.addEventListener("click", e => {
-        if (e.target === deleteBtn) return;
-        const open = body.classList.toggle("open");
-        toggle.textContent = open ? "收起" : "展开";
-      });
+      header.addEventListener("click", e => { if (e.target === deleteBtn) return; const open = body.classList.toggle("open"); toggle.textContent = open ? "收起" : "展开"; });
       deleteBtn.addEventListener("click", async e => {
-        e.preventDefault();
-        e.stopPropagation();
+        e.preventDefault(); e.stopPropagation();
         if (!confirm(`确定删除这条记录吗？\n${r.title}`)) return;
-        try {
-          await fetch(`/api/records/${encodeURIComponent(r.filename)}`, { method: "DELETE" });
-          item.remove();
-          if (!historyList.querySelector(".record-item")) {
-            historyEmpty.style.display = "block";
-          }
-          loadStats();
-        } catch (err) {
-          alert("删除失败：" + err);
-        }
+        try { await fetch(`/api/records/${encodeURIComponent(r.filename)}`, { method: "DELETE" }); item.remove(); if (!historyList.querySelector(".record-item")) historyEmpty.style.display = "block"; loadStats(); }
+        catch (err) { alert("删除失败：" + err); }
       });
       historyList.appendChild(item);
     });
-  } catch (e) {
-    console.warn("Failed to load history", e);
-  }
+  } catch (e) { console.warn("Failed to load history", e); }
 }
 
-function esc(s) {
-  const d = document.createElement("div");
-  d.textContent = s || "";
-  return d.innerHTML;
-}
+function esc(s) { const d = document.createElement("div"); d.textContent = s || ""; return d.innerHTML; }
 
-/* ---------- Report panel renderer ---------- */
+/* ---------- Report renderer ---------- */
 function renderReport(data) {
   feedbackCard.classList.remove("visible");
-
   const accordions = $("reportAccordions");
   const summary = $("reportSummary");
   accordions.innerHTML = "";
   summary.innerHTML = "";
-
   data.questions.forEach((q, idx) => {
     const isFirst = idx === 0;
     const acc = document.createElement("div");
     acc.className = "rpt-accordion";
-
-    const headerHtml = `
+    const refRow = q.reference_answer ? `<div class="rpt-row rpt-row-ref"><div class="rpt-row-label">参考答案</div><div class="rpt-row-content">${esc(q.reference_answer)}</div></div>` : "";
+    const commentRow = q.comment ? `<div class="rpt-row rpt-row-comment"><div class="rpt-row-label">教练点评</div><div class="rpt-row-content">${esc(q.comment)}</div></div>` : "";
+    acc.innerHTML = `
       <div class="rpt-acc-header">
         <div class="rpt-acc-meta">
           <span class="rpt-acc-title">第${q.index}题【${esc(q.category)}】</span>
           ${q.elapsed_label ? `<span class="rpt-acc-time">${esc(q.elapsed_label)}</span>` : ""}
         </div>
         <span class="rpt-acc-toggle">${isFirst ? "▲" : "▼"}</span>
-      </div>`;
-
-    const refRow = q.reference_answer ? `
-      <div class="rpt-row rpt-row-ref">
-        <div class="rpt-row-label">参考答案</div>
-        <div class="rpt-row-content">${esc(q.reference_answer)}</div>
-      </div>` : "";
-
-    const commentRow = q.comment ? `
-      <div class="rpt-row rpt-row-comment">
-        <div class="rpt-row-label">教练点评</div>
-        <div class="rpt-row-content">${esc(q.comment)}</div>
-      </div>` : "";
-
-    acc.innerHTML = `
-      ${headerHtml}
+      </div>
       <div class="rpt-acc-body ${isFirst ? "open" : ""}">
-        <div class="rpt-row">
-          <div class="rpt-row-label">题目</div>
-          <div class="rpt-row-content">${esc(q.prompt)}</div>
-        </div>
-        <div class="rpt-row rpt-row-answer">
-          <div class="rpt-row-label">我的回答</div>
-          <div class="rpt-row-content">${esc(q.answer || "（未检测到回答）")}</div>
-        </div>
-        ${refRow}
-        ${commentRow}
+        <div class="rpt-row"><div class="rpt-row-label">题目</div><div class="rpt-row-content">${esc(q.prompt)}</div></div>
+        <div class="rpt-row rpt-row-answer"><div class="rpt-row-label">我的回答</div><div class="rpt-row-content">${esc(q.answer || "（未检测到回答）")}</div></div>
+        ${refRow}${commentRow}
       </div>`;
-
     const header = acc.querySelector(".rpt-acc-header");
     const body = acc.querySelector(".rpt-acc-body");
     const toggle = acc.querySelector(".rpt-acc-toggle");
-    header.addEventListener("click", () => {
-      const open = body.classList.toggle("open");
-      toggle.textContent = open ? "▲" : "▼";
-    });
+    header.addEventListener("click", () => { const open = body.classList.toggle("open"); toggle.textContent = open ? "▲" : "▼"; });
     accordions.appendChild(acc);
   });
-
-  if (data.overall) {
-    summary.insertAdjacentHTML("beforeend", `
-      <div class="rpt-summary rpt-overall">
-        <div class="rpt-summary-label">总体评价</div>
-        <div class="rpt-summary-body">${esc(data.overall)}</div>
-      </div>`);
-  }
-  if (data.recommendations) {
-    summary.insertAdjacentHTML("beforeend", `
-      <div class="rpt-summary rpt-recommendations">
-        <div class="rpt-summary-label">改进建议</div>
-        <div class="rpt-summary-body">${esc(data.recommendations)}</div>
-      </div>`);
-  }
-
+  if (data.overall) summary.insertAdjacentHTML("beforeend", `<div class="rpt-summary rpt-overall"><div class="rpt-summary-label">总体评价</div><div class="rpt-summary-body">${esc(data.overall)}</div></div>`);
+  if (data.recommendations) summary.insertAdjacentHTML("beforeend", `<div class="rpt-summary rpt-recommendations"><div class="rpt-summary-label">改进建议</div><div class="rpt-summary-body">${esc(data.recommendations)}</div></div>`);
   reportPanel.classList.add("visible");
   reportPanel.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-/* ---------- RTVI messaging ---------- */
+/* ---------- RTVI ---------- */
 function sendRTVIMessage(type, data) {
   if (!dc || dc.readyState !== "open") return;
-  const msg = {
-    label: "rtvi-ai",
-    type: "client-message",
-    id: crypto.randomUUID(),
-    data: { t: type, d: data || null }
-  };
-  dc.send(JSON.stringify(msg));
+  dc.send(JSON.stringify({ label: "rtvi-ai", type: "client-message", id: crypto.randomUUID(), data: { t: type, d: data || null } }));
 }
 
-/* ---------- Server message handler ---------- */
+/* ---------- Server messages ---------- */
 function handleServerMessage(msg) {
   if (msg.type === "server-message" && msg.data) {
     const d = msg.data;
@@ -998,21 +638,22 @@ function handleServerMessage(msg) {
         enableAnswerButtons();
         break;
       case "waiting_answer":
-        // d.index is 1-based
         onWaitingAnswer(d.index);
         break;
       case "transcript":
-        if (activeQuestionIdx !== null) transcriptArea.textContent = d.text || "——";
+        if (chatListening) {
+          $("chatLiveTranscript").textContent = d.text || "——";
+        } else if (activeQuestionIdx !== null) {
+          const ta = $("qcard-transcript-" + activeQuestionIdx);
+          if (ta) ta.textContent = d.text || "——";
+        }
         break;
       case "answer_transcript":
-        // d.index is 1-based
-        onAnswerTranscript(d.index, d.text);
+        onAnswerTranscript(d.index);
         break;
       case "generating_feedback":
-        // Hide session UI, show feedback loading
         $("questionsBatch").style.display = "none";
         $("thinkingCard").style.display = "none";
-        $("activeAnswerCard").style.display = "none";
         stopAnswerTimer();
         feedbackCard.classList.add("visible");
         feedbackArea.textContent = "";
@@ -1037,99 +678,89 @@ function handleServerMessage(msg) {
         btnStart.disabled = false;
         setStatus("connected", "已就绪，可开始新一轮练习");
         break;
+      case "chat_ready":
+        $("chatCard").style.display = "block";
+        $("chatCard").scrollIntoView({ behavior: "smooth", block: "start" });
+        break;
+      case "chat_user_transcript":
+        $("chatLiveTranscript").style.display = "none";
+        appendChatMsg("user", d.text);
+        break;
+      case "chat_bot_chunk":
+        appendChatChunk(d.text);
+        break;
+      case "chat_bot_done": {
+        const history = $("chatHistory");
+        const last = history.querySelector(".chat-msg--bot:last-child");
+        if (last) last.classList.remove("chat-streaming");
+        // Re-enable chat buttons
+        btnChatStart.style.display = "";
+        btnChatStart.disabled = false;
+        btnChatStop.style.display = "none";
+        chatListening = false;
+        break;
+      }
       case "error":
         setStatus("error", "出错了：" + (d.text || "未知错误"));
         break;
     }
   }
-  if (msg.type === "bot-ready") {
-    btnStart.disabled = false;
-    setStatus("connected", "已就绪");
-  }
+  if (msg.type === "bot-ready") { btnStart.disabled = false; setStatus("connected", "已就绪"); }
 }
 
-/* ---------- WebRTC connect ---------- */
+/* ---------- WebRTC ---------- */
 async function connect() {
   setStatus("", "连接中...");
-  try {
-    localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  } catch (e) {
-    setStatus("error", "无法获取麦克风");
-    return;
-  }
-
+  try { localStream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch (e) { setStatus("error", "无法获取麦克风"); return; }
   pc = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
   localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
   pc.addTransceiver("audio", { direction: "recvonly" });
-
   const remoteAudio = new Audio();
   remoteAudio.autoplay = true;
   pc.ontrack = e => { remoteAudio.srcObject = e.streams[0]; };
-
   dc = pc.createDataChannel("chat");
   dc.onopen = () => {
     setStatus("connected", "已连接");
     pingInterval = setInterval(() => { if (dc.readyState === "open") dc.send("ping"); }, 1000);
-    setTimeout(() => {
-      dc.send(JSON.stringify({
-        label: "rtvi-ai",
-        type: "client-ready",
-        id: crypto.randomUUID(),
-        data: { version: "1.2.0" }
-      }));
-    }, 500);
+    setTimeout(() => { dc.send(JSON.stringify({ label: "rtvi-ai", type: "client-ready", id: crypto.randomUUID(), data: { version: "1.2.0" } })); }, 500);
   };
-  dc.onmessage = e => {
-    try { handleServerMessage(JSON.parse(e.data)); } catch {}
-  };
-  dc.onclose = () => {
-    setStatus("", "已断开");
-    clearInterval(pingInterval);
-  };
-
-  pc.oniceconnectionstatechange = () => {
-    if (pc.iceConnectionState === "disconnected" || pc.iceConnectionState === "failed") {
-      setStatus("error", "连接断开");
-      clearInterval(pingInterval);
-    }
-  };
-
+  dc.onmessage = e => { try { handleServerMessage(JSON.parse(e.data)); } catch {} };
+  dc.onclose = () => { setStatus("", "已断开"); clearInterval(pingInterval); };
+  pc.oniceconnectionstatechange = () => { if (pc.iceConnectionState === "disconnected" || pc.iceConnectionState === "failed") { setStatus("error", "连接断开"); clearInterval(pingInterval); } };
   const offer = await pc.createOffer();
   await pc.setLocalDescription(offer);
-  await new Promise(r => {
-    if (pc.iceGatheringState === "complete") r();
-    else pc.onicegatheringstatechange = () => { if (pc.iceGatheringState === "complete") r(); };
-  });
-
-  const resp = await fetch("/api/offer", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sdp: pc.localDescription.sdp, type: pc.localDescription.type })
-  });
+  await new Promise(r => { if (pc.iceGatheringState === "complete") r(); else pc.onicegatheringstatechange = () => { if (pc.iceGatheringState === "complete") r(); }; });
+  const resp = await fetch("/api/offer", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sdp: pc.localDescription.sdp, type: pc.localDescription.type }) });
   const answer = await resp.json();
   await pc.setRemoteDescription(new RTCSessionDescription({ sdp: answer.sdp, type: answer.type }));
 }
 
-/* ---------- Button handlers ---------- */
+/* ---------- Buttons ---------- */
 btnStart.addEventListener("click", () => {
   btnStart.disabled = true;
   // Reset session state
   questionsBatch = [];
-  thinkingUnlocked = false;
   activeQuestionIdx = null;
   answeredSet = new Set();
+  chatListening = false;
   if (thinkingTimerInterval) { clearInterval(thinkingTimerInterval); thinkingTimerInterval = null; }
   stopAnswerTimer();
   // Reset UI
   $("questionsBatch").innerHTML = "";
   $("questionsBatch").style.display = "none";
   $("thinkingCard").style.display = "none";
-  $("activeAnswerCard").style.display = "none";
   feedbackCard.classList.remove("visible");
   feedbackArea.textContent = "";
   reportPanel.classList.remove("visible");
   $("reportAccordions").innerHTML = "";
   $("reportSummary").innerHTML = "";
+  $("chatCard").style.display = "none";
+  $("chatHistory").innerHTML = "";
+  $("chatLiveTranscript").style.display = "none";
+  btnChatStart.style.display = "";
+  btnChatStart.disabled = false;
+  btnChatStop.style.display = "none";
   progressText.textContent = "加载题目...";
   sendRTVIMessage("start_practice");
 });
@@ -1139,9 +770,22 @@ $("btnSkipThinking").addEventListener("click", () => {
   enableAnswerButtons();
 });
 
-btnDone.addEventListener("click", () => {
-  btnDone.disabled = true;
-  sendRTVIMessage("done_answering", { elapsed_secs: getElapsedSecs() });
+btnChatStart.addEventListener("click", () => {
+  chatListening = true;
+  btnChatStart.style.display = "none";
+  btnChatStop.style.display = "";
+  const lt = $("chatLiveTranscript");
+  lt.style.display = "block";
+  lt.textContent = "——";
+  sendRTVIMessage("chat_start");
+});
+
+btnChatStop.addEventListener("click", () => {
+  chatListening = false;
+  btnChatStop.style.display = "none";
+  btnChatStart.style.display = "";
+  btnChatStart.disabled = true;  // disabled until chat_bot_done
+  sendRTVIMessage("chat_stop");
 });
 
 /* ---------- Init ---------- */

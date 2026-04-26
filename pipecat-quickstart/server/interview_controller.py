@@ -1,11 +1,12 @@
 """Interview practice controller -- event-driven state machine.
 
 Sits in the pipeline between STT and TTS. Displays all 3 questions at once,
-allows per-question answering after a thinking timer, then calls the LLM
-once for the final summary.
+allows per-question answering after a thinking timer, delivers a report, then
+enables a multi-turn voice chat for post-report review.
 """
 
 import os
+import re
 import time
 from enum import Enum
 from typing import Any
@@ -17,6 +18,7 @@ from pipecat.frames.frames import (
     InputTransportMessageFrame,
     OutputTransportMessageUrgentFrame,
     TranscriptionFrame,
+    TTSSpeakFrame,
 )
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 
@@ -27,13 +29,17 @@ from interview_practice import (
 )
 from reference_answer import generate_reference_answer
 
+_SENTENCE_END = re.compile(r"[。？！?!\n]")
+
 
 class _State(Enum):
     IDLE = "idle"
     SHOWING_QUESTIONS = "showing_questions"  # all 3 questions displayed, thinking timer active
     ANSWERING = "answering"  # user answering one specific question (mic hot)
     GENERATING_FEEDBACK = "generating_feedback"
-    FINISHED = "finished"
+    FINISHED = "finished"  # report delivered; idle for chat
+    CHAT_LISTENING = "chat_listening"  # user speaking a chat question
+    CHAT_THINKING = "chat_thinking"  # LLM + TTS in progress
 
 
 THINKING_SECS = 600  # 10-minute thinking window
@@ -42,12 +48,18 @@ THINKING_SECS = 600  # 10-minute thinking window
 class InterviewController(FrameProcessor):
     """Event-driven interview controller.
 
-    State transitions:
-        idle -> showing_questions   (start_practice: all 3 questions sent at once)
-        showing_questions -> answering  (start_question: user clicks a question card)
-        answering -> showing_questions  (done_answering: user finishes one question)
-        showing_questions -> generating_feedback  (auto-triggered when all answered)
+    State transitions (practice):
+        idle -> showing_questions   (start_practice)
+        showing_questions -> answering  (start_question)
+        answering -> showing_questions  (done_answering)
+        showing_questions -> generating_feedback  (all answered)
         generating_feedback -> finished
+
+    State transitions (post-report chat):
+        finished -> chat_listening  (chat_start)
+        chat_listening -> chat_thinking  (chat_stop, non-empty transcript)
+        chat_listening -> finished  (chat_stop, empty transcript)
+        chat_thinking -> finished   (LLM + TTS done)
     """
 
     def __init__(self, **kwargs):
@@ -55,6 +67,7 @@ class InterviewController(FrameProcessor):
         self._state = _State.IDLE
         self._session: PracticeSession | None = None
         self._current_transcript_parts: list[str] = []
+        self._chat_transcript_parts: list[str] = []
         self._active_idx: int | None = None
         self._question_start_ts: dict[int, float] = {}
         self._ref_answers: dict[int, str] = {}
@@ -104,10 +117,16 @@ class InterviewController(FrameProcessor):
         if action == "done_answering":
             await self._on_done_answering()
             return True
+        if action == "chat_start":
+            await self._on_chat_start()
+            return True
+        if action == "chat_stop":
+            await self._on_chat_stop()
+            return True
         return False
 
     # ------------------------------------------------------------------
-    # State handlers
+    # Practice state handlers
     # ------------------------------------------------------------------
 
     async def _on_start_practice(self):
@@ -115,6 +134,7 @@ class InterviewController(FrameProcessor):
             return
         logger.info("Starting practice session")
         self._current_transcript_parts.clear()
+        self._chat_transcript_parts.clear()
         self._active_idx = None
         self._question_start_ts.clear()
         self._ref_answers.clear()
@@ -124,7 +144,6 @@ class InterviewController(FrameProcessor):
         self._session = build_practice_session()
         self._state = _State.SHOWING_QUESTIONS
 
-        # Pre-fetch reference answers during the thinking window
         for i, q in enumerate(self._session.questions):
             self._ref_tasks[i] = self.create_task(self._fetch_ref_answer(q, i), f"ref_answer_{i}")
 
@@ -148,7 +167,7 @@ class InterviewController(FrameProcessor):
     async def _on_start_question(self, index: int):
         if self._state != _State.SHOWING_QUESTIONS or self._session is None:
             return
-        idx = index - 1  # client sends 1-based; store 0-based
+        idx = index - 1
         if idx < 0 or idx >= self._session.total_questions:
             return
         if self._session.is_answered(idx):
@@ -171,13 +190,7 @@ class InterviewController(FrameProcessor):
         self._current_transcript_parts.clear()
         logger.info(f"Answer recorded for Q{idx + 1}: {answer[:80]}...")
 
-        await self._send_ui(
-            {
-                "type": "answer_transcript",
-                "index": idx + 1,
-                "text": answer,
-            }
-        )
+        await self._send_ui({"type": "answer_transcript", "index": idx + 1, "text": answer})
 
         self._active_idx = None
         self._state = _State.SHOWING_QUESTIONS
@@ -188,21 +201,52 @@ class InterviewController(FrameProcessor):
             await self._generate_and_deliver_feedback()
 
     # ------------------------------------------------------------------
-    # Transcript accumulation
+    # Chat state handlers
+    # ------------------------------------------------------------------
+
+    async def _on_chat_start(self):
+        if self._state != _State.FINISHED:
+            return
+        logger.info("Chat started")
+        self._chat_transcript_parts.clear()
+        self._state = _State.CHAT_LISTENING
+
+    async def _on_chat_stop(self):
+        if self._state != _State.CHAT_LISTENING or self._session is None:
+            return
+        question = " ".join(self._chat_transcript_parts).strip()
+        self._chat_transcript_parts.clear()
+        if not question:
+            logger.info("Empty chat question, returning to finished")
+            self._state = _State.FINISHED
+            await self._send_ui({"type": "chat_bot_done"})
+            return
+        logger.info(f"Chat question: {question[:80]}")
+        await self._send_ui({"type": "chat_user_transcript", "text": question})
+        self._session.chat_history.append({"role": "user", "content": question})
+        self._state = _State.CHAT_THINKING
+        await self._handle_chat_query()
+
+    # ------------------------------------------------------------------
+    # Transcript accumulation (routes based on state)
     # ------------------------------------------------------------------
 
     async def _handle_transcription(self, frame: TranscriptionFrame):
-        if self._state == _State.ANSWERING and frame.text.strip():
+        if not frame.text.strip():
+            return
+        if self._state == _State.ANSWERING:
             self._current_transcript_parts.append(frame.text.strip())
             await self._send_ui(
-                {
-                    "type": "transcript",
-                    "text": " ".join(self._current_transcript_parts),
-                }
+                {"type": "transcript", "text": " ".join(self._current_transcript_parts)}
+            )
+        elif self._state == _State.CHAT_LISTENING:
+            self._chat_transcript_parts.append(frame.text.strip())
+            await self._send_ui(
+                {"type": "transcript", "text": " ".join(self._chat_transcript_parts)}
             )
 
     # ------------------------------------------------------------------
-    # Pre-fetch reference answer (background, during thinking window)
+    # Reference answer pre-fetch
     # ------------------------------------------------------------------
 
     async def _fetch_ref_answer(self, q, index: int):
@@ -214,7 +258,7 @@ class InterviewController(FrameProcessor):
             logger.error(f"Reference answer generation failed for Q{index + 1}: {e}")
 
     # ------------------------------------------------------------------
-    # Per-question comment (launched after all answers collected)
+    # Per-question comment
     # ------------------------------------------------------------------
 
     async def _generate_question_comment(self, q, answer: str, index: int):
@@ -342,11 +386,98 @@ class InterviewController(FrameProcessor):
         self._state = _State.FINISHED
         logger.info("Interview practice finished")
         await self._send_ui({"type": "session_ready"})
+        await self._send_ui({"type": "chat_ready"})
+
+    # ------------------------------------------------------------------
+    # Chat query — LLM with sentence-level TTS
+    # ------------------------------------------------------------------
+
+    def _build_report_context(self) -> str:
+        if self._session is None:
+            return ""
+        lines = []
+        for i, q in enumerate(self._session.questions):
+            lines.append(f"第{i + 1}题【{q.category}】")
+            lines.append(f"题目：{q.prompt}")
+            lines.append(f"考生回答：{self._session.answers.get(i, '未作答')}")
+            ref = self._ref_answers.get(i, "")
+            if ref:
+                lines.append(f"参考答案：{ref}")
+            comment = self._q_comments.get(i, "")
+            if comment:
+                lines.append(f"逐题点评：{comment}")
+            elapsed = self._session.answer_times.get(i, 0)
+            mm, ss = divmod(elapsed, 60)
+            lines.append(f"答题用时：{mm}分{ss:02d}秒")
+            lines.append("")
+        if self._session.final_feedback:
+            overall, recs = self._parse_summary(self._session.final_feedback)
+            if overall:
+                lines.append(f"总体评价：{overall}")
+            if recs:
+                lines.append(f"改进建议：{recs}")
+        return "\n".join(lines)
+
+    async def _handle_chat_query(self):
+        context = self._build_report_context()
+        system_content = (
+            "你是一名广州事业单位面试陪练教练。考生刚完成本次三道题练习，"
+            "请基于以下题目、答题、参考答案和点评，与考生进行有针对性的复盘对话。"
+            "回答要简洁、口语化，不超过200字，不要使用markdown、emoji或项目符号。"
+            f"\n\n本次练习内容：\n{context}"
+        )
+        messages = [{"role": "system", "content": system_content}, *self._session.chat_history]
+
+        response_parts: list[str] = []
+        sentence_buf = ""
+        try:
+            client = openai.AsyncOpenAI(
+                api_key=os.getenv("ARK_API_KEY"),
+                base_url=os.getenv("ARK_BASE_URL"),
+            )
+            stream = await client.chat.completions.create(
+                model=os.getenv("ARK_MODEL", "doubao-seed-2-0-pro-260215"),
+                messages=messages,
+                extra_body={"thinking": {"type": "disabled"}},
+                stream=True,
+            )
+            async for chunk in stream:
+                delta = chunk.choices[0].delta.content or ""
+                if not delta:
+                    continue
+                response_parts.append(delta)
+                await self._send_ui({"type": "chat_bot_chunk", "text": delta})
+                sentence_buf += delta
+                # Flush complete sentences to TTS immediately
+                while True:
+                    m = _SENTENCE_END.search(sentence_buf)
+                    if not m:
+                        break
+                    sentence = sentence_buf[: m.end()].strip()
+                    sentence_buf = sentence_buf[m.end() :]
+                    if sentence:
+                        await self.push_frame(TTSSpeakFrame(text=sentence))
+            # Flush any remaining text
+            if sentence_buf.strip():
+                await self.push_frame(TTSSpeakFrame(text=sentence_buf.strip()))
+        except Exception as e:
+            logger.error(f"Chat LLM call failed: {e}")
+            err_msg = "抱歉，对话生成失败，请重试。"
+            response_parts.append(err_msg)
+            await self._send_ui({"type": "chat_bot_chunk", "text": err_msg})
+
+        full_response = "".join(response_parts)
+        self._session.chat_history.append({"role": "assistant", "content": full_response})
+        await self._send_ui({"type": "chat_bot_done"})
+        self._state = _State.FINISHED
+        logger.info("Chat response complete")
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
 
     @staticmethod
     def _parse_summary(text: str) -> tuple[str, str]:
-        import re
-
         parts = re.split(r"\[([^\]]+)\]", text)
         sections: dict[str, str] = {}
         for i in range(1, len(parts) - 1, 2):
