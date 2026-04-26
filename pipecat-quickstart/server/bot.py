@@ -266,6 +266,7 @@ async def run_bot(transport: BaseTransport):
             enable_usage_metrics=True,
         ),
         observers=[],
+        idle_timeout_secs=None,
     )
 
     @task.rtvi.event_handler("on_client_ready")
@@ -288,7 +289,7 @@ async def run_bot(transport: BaseTransport):
         if (
             practice_session.final_feedback_requested
             and practice_session.final_feedback is None
-            and practice_session.is_complete
+            and practice_session.all_answered()
         ):
             practice_session.final_feedback = message.content
             logger.info("Practice complete")

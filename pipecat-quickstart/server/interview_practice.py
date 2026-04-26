@@ -61,10 +61,10 @@ def _save_used_ids(used_ids: set[str]):
 @dataclass
 class PracticeSession:
     questions: List[PracticeQuestion]
-    answers: List[str] = field(default_factory=list)
-    answer_times: List[int] = field(default_factory=list)
-    reference_answers: List[str] = field(default_factory=list)
-    question_comments: List[str] = field(default_factory=list)
+    answers: dict[int, str] = field(default_factory=dict)
+    answer_times: dict[int, int] = field(default_factory=dict)
+    reference_answers: dict[int, str] = field(default_factory=dict)
+    question_comments: dict[int, str] = field(default_factory=dict)
     final_feedback_requested: bool = False
     final_feedback: str | None = None
 
@@ -72,43 +72,46 @@ class PracticeSession:
     def total_questions(self) -> int:
         return len(self.questions)
 
-    @property
-    def current_question_index(self) -> int:
-        return len(self.answers)
+    def is_answered(self, index: int) -> bool:
+        return index in self.answers
 
-    @property
-    def is_complete(self) -> bool:
+    def all_answered(self) -> bool:
         return len(self.answers) >= self.total_questions
 
-    def record_answer(self, answer: str, elapsed_secs: int = 0):
-        cleaned = answer.strip()
-        if cleaned and len(self.answers) < self.total_questions:
-            self.answers.append(cleaned)
-            self.answer_times.append(elapsed_secs)
+    def record_answer(self, index: int, answer: str, elapsed_secs: int = 0):
+        if 0 <= index < self.total_questions:
+            self.answers[index] = answer.strip() or "（未检测到回答）"
+            self.answer_times[index] = elapsed_secs
 
     def formatted_history(self) -> str:
         lines = []
-        for idx, question in enumerate(self.questions, start=1):
-            answer = self.answers[idx - 1] if idx - 1 < len(self.answers) else "用户尚未作答"
-            lines.append(f"第{idx}题【{question.category}】")
+        for idx, question in enumerate(self.questions):
+            answer = self.answers.get(idx, "用户尚未作答")
+            lines.append(f"第{idx + 1}题【{question.category}】")
             lines.append(f"题目：{question.prompt}")
             lines.append(f"回答：{answer}")
         return "\n".join(lines)
 
 
+_SESSION_QUESTION_COUNT = 3
+
+
 def build_practice_session() -> PracticeSession:
-    """从 JSON 题库中按类别各抽 1 题，自动跳过已用题目。
+    """从 JSON 题库中随机选 3 个类别各抽 1 题，自动跳过已用题目。
 
     当某个类别的所有题目都已用过时，自动重置该类别的已用记录。
     """
     bank = _load_question_bank()
     used_ids = _load_used_ids()
-    selected: list[PracticeQuestion] = []
 
-    for category, items in bank.items():
+    categories = list(bank.keys())
+    chosen_categories = random.sample(categories, min(_SESSION_QUESTION_COUNT, len(categories)))
+
+    selected: list[PracticeQuestion] = []
+    for category in chosen_categories:
+        items = bank[category]
         available = [q for q in items if q["id"] not in used_ids]
         if not available:
-            # 该类别题目已全部用过，重置后重新选
             for q in items:
                 used_ids.discard(q["id"])
             available = items
@@ -188,11 +191,12 @@ def save_practice_record(session: PracticeSession) -> Path:
     title = now.strftime("%Y-%m-%d %H:%M:%S")
     lines = [f"# 面试练习记录 {title}\n"]
 
-    for idx, question in enumerate(session.questions, start=1):
-        answer = session.answers[idx - 1] if idx - 1 < len(session.answers) else "用户尚未作答"
-        ref = session.reference_answers[idx - 1] if idx - 1 < len(session.reference_answers) else ""
-        elapsed = session.answer_times[idx - 1] if idx - 1 < len(session.answer_times) else 0
-        lines.append(f"## 第{idx}题【{question.category}】\n")
+    for idx, question in enumerate(session.questions):
+        answer = session.answers.get(idx, "用户尚未作答")
+        ref = session.reference_answers.get(idx, "")
+        elapsed = session.answer_times.get(idx, 0)
+        comment = session.question_comments.get(idx, "")
+        lines.append(f"## 第{idx + 1}题【{question.category}】\n")
         lines.append(f"**题目：** {question.prompt}\n")
         lines.append(f"**回答：** {answer}\n")
         if elapsed:
@@ -200,9 +204,6 @@ def save_practice_record(session: PracticeSession) -> Path:
             lines.append(f"**用时：** {mm}分{ss:02d}秒\n")
         if ref:
             lines.append(f"**参考答案：** {ref}\n")
-        comment = (
-            session.question_comments[idx - 1] if idx - 1 < len(session.question_comments) else ""
-        )
         if comment:
             lines.append(f"**逐题点评：** {comment}\n")
 

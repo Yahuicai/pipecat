@@ -148,32 +148,6 @@
     transition: width .5s;
   }
 
-  /* ---------- feedback sections ---------- */
-  .feedback-sections { display: none; flex-direction: column; gap: 10px; }
-  .feedback-sections.visible { display: flex; }
-  .fb-section {
-    border-radius: 8px;
-    padding: 12px 14px;
-  }
-  .fb-section-title {
-    font-size: 13px;
-    font-weight: 700;
-    margin-bottom: 4px;
-  }
-  .fb-section-body {
-    font-size: 14px;
-    line-height: 1.7;
-    white-space: pre-wrap;
-  }
-  .fb-overall { background: #eff6ff; }
-  .fb-overall .fb-section-title { color: #1d4ed8; }
-  .fb-strength { background: #f0fdf4; }
-  .fb-strength .fb-section-title { color: #15803d; }
-  .fb-issue { background: #fff7ed; }
-  .fb-issue .fb-section-title { color: #c2410c; }
-  .fb-advice { background: #faf5ff; }
-  .fb-advice .fb-section-title { color: #7e22ce; }
-
   /* ---------- report panel ---------- */
   .report-panel { display: none; }
   .report-panel.visible { display: block; }
@@ -303,51 +277,6 @@
   .status-dot.connected { background: var(--success); }
   .status-dot.error { background: var(--danger); }
 
-  .progress-bar { display: flex; gap: 8px; margin: 16px 0; }
-  .progress-step {
-    flex: 1; height: 6px; border-radius: 3px;
-    background: var(--border); transition: background .4s;
-  }
-  .progress-step.done { background: var(--success); }
-  .progress-step.active { background: var(--primary); }
-
-  .question-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
-  }
-  .question-label { font-size: 13px; color: var(--text-muted); }
-  .timer {
-    font-size: 14px;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    color: var(--primary);
-    min-width: 50px;
-    text-align: right;
-    display: none;
-  }
-  .timer.visible { display: inline-block; }
-  .reading-hint {
-    font-size: 12px;
-    color: var(--text-muted);
-    font-style: italic;
-    display: none;
-  }
-  .reading-hint.visible { display: inline-block; }
-
-  .question-area {
-    min-height: 80px;
-    font-size: 16px;
-    line-height: 1.7;
-    color: var(--text);
-    padding: 16px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: #fafbfc;
-    white-space: pre-wrap;
-  }
-
   .btn-row { display: flex; gap: 12px; margin-top: 20px; }
   .btn {
     flex: 1; padding: 14px 0; font-size: 16px; font-weight: 600;
@@ -359,26 +288,136 @@
   .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
   .btn-danger { background: var(--danger); color: #fff; }
   .btn-danger:hover:not(:disabled) { background: #d63d60; }
+  .btn-secondary { background: #e8ecf0; color: var(--text); }
+  .btn-secondary:hover:not(:disabled) { background: #d5dce4; }
 
   .section-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: var(--text); }
 
-  .completed-questions { display: none; }
-  .completed-questions.visible { display: block; }
-  .cq-item {
-    padding: 12px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    margin-bottom: 8px;
-    background: #fafbfc;
+  /* ---------- thinking phase ---------- */
+  .thinking-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
   }
-  .cq-title { font-size: 13px; font-weight: 600; color: var(--primary); margin-bottom: 4px; }
-  .cq-prompt { font-size: 13px; color: var(--text); margin-bottom: 4px; }
-  .cq-answer-label { font-size: 12px; color: var(--text-muted); margin-bottom: 2px; }
-  .cq-answer { font-size: 13px; color: var(--text); white-space: pre-wrap; margin-bottom: 6px; }
-  .cq-ref-label { font-size: 12px; font-weight: 600; color: #059669; margin-bottom: 2px; }
-  .cq-ref { font-size: 13px; color: #065f46; white-space: pre-wrap; background: #ecfdf5; padding: 8px; border-radius: 6px; display: none; }
-  .cq-ref.visible { display: block; }
+  .countdown {
+    font-size: 32px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--primary);
+    letter-spacing: 0.02em;
+  }
+  .countdown.warning { color: #f77f00; }
+  .countdown.expired { color: var(--danger); }
+  .thinking-desc {
+    font-size: 14px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-bottom: 4px;
+  }
 
+  /* ---------- question cards batch ---------- */
+  #questionsBatch {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .qcard {
+    background: var(--card);
+    border-radius: var(--radius);
+    box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    padding: 20px 24px;
+    border: 2px solid transparent;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .qcard.answering {
+    border-color: var(--primary);
+    box-shadow: 0 4px 20px rgba(67,97,238,.15);
+  }
+  .qcard.answered {
+    opacity: 0.75;
+  }
+
+  .qcard-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .qcard-num {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text);
+  }
+  .qcard-cat {
+    font-size: 12px;
+    color: var(--primary);
+    background: #eff6ff;
+    padding: 2px 10px;
+    border-radius: 10px;
+  }
+  .qcard-status {
+    font-size: 12px;
+    padding: 2px 10px;
+    border-radius: 10px;
+    margin-left: auto;
+    font-weight: 600;
+  }
+  .qcard-status--pending { color: var(--text-muted); background: #f0f2f5; }
+  .qcard-status--answering { color: var(--primary); background: #eff6ff; }
+  .qcard-status--answered { color: #059669; background: #ecfdf5; }
+
+  .qcard-text {
+    font-size: 15px;
+    line-height: 1.75;
+    color: var(--text);
+    padding: 14px 16px;
+    background: #fafbfc;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    margin-bottom: 14px;
+  }
+
+  .qcard-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+  }
+  .qcard-timer {
+    font-size: 14px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--primary);
+    display: none;
+  }
+  .qcard-timer.visible { display: inline-block; }
+  .qcard-start-btn {
+    flex: 0 !important;
+    padding: 10px 24px !important;
+    font-size: 14px !important;
+  }
+
+  /* ---------- active answer section ---------- */
+  .transcript-label { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+  .transcript-area {
+    font-size: 13px; color: var(--text-muted);
+    min-height: 60px; padding: 12px;
+    border: 1px dashed var(--border); border-radius: 8px;
+    white-space: pre-wrap;
+  }
+  .soft-warn {
+    font-size: 12px;
+    color: #f77f00;
+    margin-top: 6px;
+    display: none;
+  }
+  .soft-warn.visible { display: block; }
+
+  /* ---------- feedback card ---------- */
   .feedback-card { display: none; }
   .feedback-card.visible { display: block; }
   .feedback-area {
@@ -396,14 +435,6 @@
     animation: blink 1s steps(2) infinite;
   }
   @keyframes blink { 0% { opacity: 1; } 100% { opacity: 0; } }
-
-  .transcript-label { font-size: 12px; color: var(--text-muted); margin-top: 12px; margin-bottom: 4px; }
-  .transcript-area {
-    font-size: 13px; color: var(--text-muted);
-    min-height: 40px; padding: 12px;
-    border: 1px dashed var(--border); border-radius: 8px;
-    margin-top: 4px; white-space: pre-wrap;
-  }
 
   @media (max-width: 768px) {
     body { flex-direction: column; }
@@ -446,55 +477,54 @@
 <div class="container">
   <h1>面试练习助手</h1>
 
+  <!-- Status bar -->
   <div class="card">
     <div class="status-bar">
       <span><span class="status-dot" id="statusDot"></span><span id="statusText">未连接</span></span>
       <span id="progressText">等待开始</span>
     </div>
-    <div class="progress-bar" id="progressBar">
-      <div class="progress-step" id="step0"></div>
-      <div class="progress-step" id="step1"></div>
-      <div class="progress-step" id="step2"></div>
+  </div>
+
+  <!-- Pre-session: start button -->
+  <div class="card" id="startCard">
+    <div class="btn-row" style="margin-top:0">
+      <button type="button" class="btn btn-primary" id="btnStart" disabled>开始练习</button>
     </div>
   </div>
 
-  <div class="card">
-    <div class="question-header">
-      <span class="question-label" id="questionLabel">题目区域</span>
-      <span>
-        <span class="reading-hint" id="readingHint">题目朗读中...</span>
-        <span class="timer" id="timer">00:00</span>
-      </span>
+  <!-- Thinking phase card (shown after start_practice) -->
+  <div class="card" id="thinkingCard" style="display:none">
+    <div class="thinking-header">
+      <span class="section-title" style="margin-bottom:0">思考时间</span>
+      <span class="countdown" id="countdownEl">10:00</span>
     </div>
-    <div class="question-area" id="questionArea">点击「开始练习」后，系统将抽取三道题目依次进行练习。</div>
+    <p class="thinking-desc">请仔细阅读以下三道题，思考答题思路。倒计时结束或点击下方按钮后可开始作答。</p>
+    <div class="btn-row" style="margin-top:14px">
+      <button type="button" class="btn btn-secondary" id="btnSkipThinking">我已准备好，立即开始作答</button>
+    </div>
+  </div>
+
+  <!-- 3 question cards (rendered dynamically) -->
+  <div id="questionsBatch" style="display:none"></div>
+
+  <!-- Active answer section (shown when answering a question) -->
+  <div class="card" id="activeAnswerCard" style="display:none">
+    <div class="section-title" id="activeQLabel" style="margin-bottom:8px"></div>
     <div class="transcript-label">实时语音识别：</div>
     <div class="transcript-area" id="transcriptArea">——</div>
-  </div>
-
-  <div class="card">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;font-size:14px;color:var(--text-muted)">
-      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
-        <input type="checkbox" id="showQuestionToggle" checked style="width:16px;height:16px;accent-color:var(--primary)">
-        <span>显示题目文字</span>
-      </label>
-      <span style="font-size:12px;opacity:.7">（取消勾选可模拟真实面试）</span>
-    </div>
+    <div class="soft-warn" id="softWarn">答题时间较长，建议尽快收尾</div>
     <div class="btn-row">
-      <button type="button" class="btn btn-primary" id="btnStart" disabled>开始练习</button>
       <button type="button" class="btn btn-danger" id="btnDone" disabled>答题完毕</button>
     </div>
   </div>
 
-  <div class="card completed-questions" id="completedSection">
-    <div class="section-title">已完成题目</div>
-    <div id="completedList"></div>
-  </div>
-
+  <!-- Feedback streaming card -->
   <div class="card feedback-card" id="feedbackCard">
     <div class="section-title">生成报告中...</div>
     <div class="feedback-area" id="feedbackArea"></div>
   </div>
 
+  <!-- Final report panel -->
   <div class="card report-panel" id="reportPanel">
     <div class="section-title" style="margin-bottom:16px">练习报告</div>
     <div id="reportAccordions"></div>
@@ -509,16 +539,10 @@ const $ = id => document.getElementById(id);
 const statusDot = $("statusDot");
 const statusText = $("statusText");
 const progressText = $("progressText");
-const questionLabel = $("questionLabel");
-const questionArea = $("questionArea");
-const transcriptArea = $("transcriptArea");
 const feedbackArea = $("feedbackArea");
 const feedbackCard = $("feedbackCard");
-const completedSection = $("completedSection");
 const reportPanel = $("reportPanel");
-const completedList = $("completedList");
-const timerEl = $("timer");
-const readingHint = $("readingHint");
+const transcriptArea = $("transcriptArea");
 const btnStart = $("btnStart");
 const btnDone = $("btnDone");
 const historyList = $("historyList");
@@ -531,57 +555,195 @@ let dc = null;
 let localStream = null;
 let pingInterval = null;
 
+// Session state
+let questionsBatch = [];
+let thinkingTimerInterval = null;
+let thinkingUnlocked = false;
+let activeQuestionIdx = null;  // 0-based
+let answeredSet = new Set();
+
+// Per-question answer timer (one active at a time)
 let timerInterval = null;
 let timerStart = null;
-let showQuestion = true;
-
-const showQuestionToggle = $("showQuestionToggle");
-showQuestionToggle.addEventListener("change", () => {
-  showQuestion = showQuestionToggle.checked;
-});
 
 function setStatus(state, text) {
   statusDot.className = "status-dot " + state;
   statusText.textContent = text;
 }
 
-function updateProgress(current, total, label) {
-  progressText.textContent = label || `第 ${current}/${total} 题`;
-  for (let i = 0; i < 3; i++) {
-    const el = $("step" + i);
-    el.className = "progress-step";
-    if (i < current - 1) el.classList.add("done");
-    else if (i === current - 1) el.classList.add("active");
+/* ---------- Countdown (thinking phase) ---------- */
+function startCountdown(totalSecs) {
+  const endAt = Date.now() + totalSecs * 1000;
+  const el = $("countdownEl");
+
+  function tick() {
+    const remaining = Math.max(0, Math.floor((endAt - Date.now()) / 1000));
+    const mm = String(Math.floor(remaining / 60)).padStart(2, "0");
+    const ss = String(remaining % 60).padStart(2, "0");
+    el.textContent = mm + ":" + ss;
+    el.className = "countdown" + (remaining <= 60 ? " warning" : "") + (remaining === 0 ? " expired" : "");
+    if (remaining === 0) {
+      clearInterval(thinkingTimerInterval);
+      thinkingTimerInterval = null;
+      enableAnswerButtons();
+    }
   }
+  tick();
+  thinkingTimerInterval = setInterval(tick, 1000);
 }
 
-/* ---------- Timer ---------- */
-function startTimer() {
-  stopTimer();
-  readingHint.classList.remove("visible");
+function enableAnswerButtons() {
+  if (thinkingTimerInterval) {
+    clearInterval(thinkingTimerInterval);
+    thinkingTimerInterval = null;
+  }
+  thinkingUnlocked = true;
+  $("thinkingCard").style.display = "none";
+  progressText.textContent = "请选择题目开始作答";
+  // Enable start buttons for all unanswered questions
+  questionsBatch.forEach(q => {
+    const idx = q.index - 1;
+    if (!answeredSet.has(idx)) {
+      const btn = $("qcard-btn-" + idx);
+      if (btn) btn.disabled = false;
+    }
+  });
+}
+
+/* ---------- Question cards ---------- */
+function renderQuestionsBatch(questions, thinkingSecs) {
+  questionsBatch = questions;
+  const container = $("questionsBatch");
+  container.innerHTML = "";
+
+  questions.forEach(q => {
+    const idx = q.index - 1;
+    const card = document.createElement("div");
+    card.className = "qcard";
+    card.id = "qcard-" + idx;
+    card.innerHTML =
+      '<div class="qcard-header">' +
+        '<span class="qcard-num">第' + q.index + '题</span>' +
+        '<span class="qcard-cat">' + esc(q.category) + '</span>' +
+        '<span class="qcard-status qcard-status--pending" id="qcard-status-' + idx + '">待答</span>' +
+      '</div>' +
+      '<div class="qcard-text">' + esc(q.text) + '</div>' +
+      '<div class="qcard-footer">' +
+        '<span class="qcard-timer" id="qcard-timer-' + idx + '"></span>' +
+        '<button type="button" class="btn btn-primary qcard-start-btn" id="qcard-btn-' + idx + '" disabled>开始答题</button>' +
+      '</div>';
+
+    const btn = card.querySelector("#qcard-btn-" + idx);
+    btn.addEventListener("click", () => startQuestion(q.index));
+    container.appendChild(card);
+  });
+
+  $("startCard").style.display = "none";
+  $("questionsBatch").style.display = "flex";
+  $("thinkingCard").style.display = "block";
+  startCountdown(thinkingSecs);
+}
+
+function startQuestion(qIndex) {
+  // qIndex is 1-based
+  sendRTVIMessage("start_question", { index: qIndex });
+}
+
+function onWaitingAnswer(qIndex) {
+  const idx = qIndex - 1;
+  activeQuestionIdx = idx;
+
+  // Update card appearance
+  const card = $("qcard-" + idx);
+  if (card) {
+    card.className = "qcard answering";
+    const status = $("qcard-status-" + idx);
+    if (status) { status.className = "qcard-status qcard-status--answering"; status.textContent = "答题中"; }
+    const btn = $("qcard-btn-" + idx);
+    if (btn) btn.disabled = true;
+  }
+
+  // Disable other unanswered cards' buttons while answering
+  questionsBatch.forEach(q => {
+    const otherIdx = q.index - 1;
+    if (otherIdx !== idx && !answeredSet.has(otherIdx)) {
+      const btn = $("qcard-btn-" + otherIdx);
+      if (btn) btn.disabled = true;
+    }
+  });
+
+  // Show active answer section
+  $("activeAnswerCard").style.display = "block";
+  $("activeQLabel").textContent = "第" + qIndex + "题 · 作答中";
+  transcriptArea.textContent = "——";
+  $("softWarn").classList.remove("visible");
+  btnDone.disabled = false;
+
+  // Start per-question elapsed timer
+  startAnswerTimer(idx);
+}
+
+function onAnswerTranscript(qIndex, text) {
+  const idx = qIndex - 1;
+  answeredSet.add(idx);
+  stopAnswerTimer();
+
+  // Mark card as answered
+  const card = $("qcard-" + idx);
+  if (card) {
+    card.className = "qcard answered";
+    const status = $("qcard-status-" + idx);
+    if (status) { status.className = "qcard-status qcard-status--answered"; status.textContent = "已答"; }
+    const btn = $("qcard-btn-" + idx);
+    if (btn) { btn.disabled = true; btn.textContent = "已完成"; }
+    // Keep timer visible with final elapsed time
+    const timerEl = $("qcard-timer-" + idx);
+    if (timerEl) timerEl.classList.add("visible");
+  }
+
+  // Re-enable unanswered cards' buttons
+  questionsBatch.forEach(q => {
+    const otherIdx = q.index - 1;
+    if (!answeredSet.has(otherIdx)) {
+      const btn = $("qcard-btn-" + otherIdx);
+      if (btn) btn.disabled = false;
+    }
+  });
+
+  // Hide active answer section
+  $("activeAnswerCard").style.display = "none";
+  btnDone.disabled = true;
+  transcriptArea.textContent = "——";
+  activeQuestionIdx = null;
+
+  // Update progress indicator
+  progressText.textContent = "已完成 " + answeredSet.size + " / " + questionsBatch.length + " 题";
+}
+
+/* ---------- Per-question answer timer ---------- */
+function startAnswerTimer(idx) {
+  stopAnswerTimer();
   timerStart = Date.now();
-  timerEl.textContent = "00:00";
-  timerEl.style.color = "var(--primary)";
-  timerEl.title = "";
-  timerEl.classList.add("visible");
+  const timerEl = $("qcard-timer-" + idx);
+  if (timerEl) { timerEl.textContent = "00:00"; timerEl.style.color = "var(--primary)"; timerEl.classList.add("visible"); }
+
   timerInterval = setInterval(() => {
     const elapsed = Math.floor((Date.now() - timerStart) / 1000);
     const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
     const ss = String(elapsed % 60).padStart(2, "0");
-    timerEl.textContent = mm + ":" + ss;
-    if (elapsed >= 300) {
-      timerEl.style.color = "var(--danger)";
-      timerEl.title = "答题时间过长，建议尽快收尾";
-    } else if (elapsed >= 180) {
-      timerEl.style.color = "#f77f00";
-      timerEl.title = "已超过建议时长（3分钟）";
+    if (timerEl) {
+      timerEl.textContent = mm + ":" + ss;
+      if (elapsed >= 300) timerEl.style.color = "var(--danger)";
+      else if (elapsed >= 180) timerEl.style.color = "#f77f00";
+      else timerEl.style.color = "var(--primary)";
     }
+    if (elapsed === 240) $("softWarn").classList.add("visible");
   }, 1000);
 }
 
-function stopTimer() {
+function stopAnswerTimer() {
   if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-  timerEl.classList.remove("visible");
+  timerStart = null;
 }
 
 function getElapsedSecs() {
@@ -615,7 +777,6 @@ function getElapsedSecs() {
 
 /* ---------- Friendly date ---------- */
 function friendlyDate(title) {
-  // title format: "2026-04-12 16:24:42"
   const m = title.match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/);
   if (!m) return title;
   const [, yr, mo, dy, hh, mm] = m;
@@ -736,8 +897,6 @@ function esc(s) {
 
 /* ---------- Report panel renderer ---------- */
 function renderReport(data) {
-  // Hide transient session UI
-  completedSection.classList.remove("visible");
   feedbackCard.classList.remove("visible");
 
   const accordions = $("reportAccordions");
@@ -827,89 +986,38 @@ function sendRTVIMessage(type, data) {
   dc.send(JSON.stringify(msg));
 }
 
-/* ---------- Completed questions ---------- */
-const cqElements = {};
-let currentQuestionMeta = {};
-
-function addCompletedQuestion(index, category, prompt, answer) {
-  completedSection.classList.add("visible");
-  const item = document.createElement("div");
-  item.className = "cq-item";
-  item.setAttribute("data-index", index);
-  item.innerHTML = `
-    <div class="cq-title">第${index}题【${esc(category)}】</div>
-    <div class="cq-prompt">${esc(prompt)}</div>
-    <div class="cq-answer-label">我的回答：</div>
-    <div class="cq-answer">${esc(answer)}</div>`;
-  completedList.appendChild(item);
-  cqElements[index] = item;
-}
-
-function updateReferenceAnswer(index, text) {
-  const item = cqElements[index];
-  if (!item) return;
-  // Lazily create ref section the first time answer arrives
-  let refEl = document.getElementById("cqRef" + index);
-  if (!refEl) {
-    const label = document.createElement("div");
-    label.className = "cq-ref-label";
-    label.textContent = "参考答案：";
-    refEl = document.createElement("div");
-    refEl.className = "cq-ref";
-    refEl.id = "cqRef" + index;
-    item.appendChild(label);
-    item.appendChild(refEl);
-  }
-  refEl.textContent = text;
-  refEl.classList.add("visible");
-}
-
 /* ---------- Server message handler ---------- */
 function handleServerMessage(msg) {
   if (msg.type === "server-message" && msg.data) {
     const d = msg.data;
     switch (d.type) {
-      case "progress":
-        updateProgress(d.current, d.total, d.label);
+      case "questions_batch":
+        renderQuestionsBatch(d.questions, d.thinking_secs || 600);
         break;
-      case "question":
-        currentQuestionMeta = { index: d.index, category: d.category, prompt: d.text };
-        questionLabel.textContent = `第${d.index}题【${d.category}】`;
-        questionArea.textContent = showQuestion ? d.text : "（真实面试模式：题目已隐藏，请认真听题）";
-        transcriptArea.textContent = "——";
-        readingHint.classList.add("visible");
-        timerEl.classList.remove("visible");
+      case "thinking_ended":
+        enableAnswerButtons();
         break;
       case "waiting_answer":
-        btnDone.disabled = false;
-        startTimer();
+        // d.index is 1-based
+        onWaitingAnswer(d.index);
         break;
       case "transcript":
-        // Only update during answering state (btnDone enabled); discard stale frames
-        if (!btnDone.disabled) transcriptArea.textContent = d.text || "——";
+        if (activeQuestionIdx !== null) transcriptArea.textContent = d.text || "——";
         break;
       case "answer_transcript":
-        addCompletedQuestion(
-          d.index,
-          currentQuestionMeta.category || "",
-          currentQuestionMeta.prompt || "",
-          d.text
-        );
-        stopTimer();
-        break;
-      case "reference_answer":
-        updateReferenceAnswer(d.index, d.text);
+        // d.index is 1-based
+        onAnswerTranscript(d.index, d.text);
         break;
       case "generating_feedback":
-        btnDone.disabled = true;
-        stopTimer();
-        readingHint.classList.remove("visible");
-        questionLabel.textContent = "总点评生成中...";
-        questionArea.textContent = "正在根据你的回答生成总点评和参考答案，请稍候...";
-        transcriptArea.textContent = "——";
+        // Hide session UI, show feedback loading
+        $("questionsBatch").style.display = "none";
+        $("thinkingCard").style.display = "none";
+        $("activeAnswerCard").style.display = "none";
+        stopAnswerTimer();
         feedbackCard.classList.add("visible");
         feedbackArea.textContent = "";
         feedbackArea.classList.add("feedback-streaming");
+        progressText.textContent = "生成报告中...";
         break;
       case "feedback_chunk":
         feedbackArea.textContent += d.text;
@@ -917,9 +1025,7 @@ function handleServerMessage(msg) {
         break;
       case "feedback_done":
         feedbackArea.classList.remove("feedback-streaming");
-        questionLabel.textContent = "生成报告中...";
         progressText.textContent = "已完成";
-        for (let i = 0; i < 3; i++) $("step" + i).className = "progress-step done";
         break;
       case "report":
         renderReport(d);
@@ -927,11 +1033,12 @@ function handleServerMessage(msg) {
         loadStats();
         break;
       case "session_ready":
+        $("startCard").style.display = "block";
         btnStart.disabled = false;
         setStatus("connected", "已就绪，可开始新一轮练习");
         break;
       case "error":
-        questionArea.textContent = "出错了：" + (d.text || "未知错误");
+        setStatus("error", "出错了：" + (d.text || "未知错误"));
         break;
     }
   }
@@ -1006,23 +1113,35 @@ async function connect() {
 /* ---------- Button handlers ---------- */
 btnStart.addEventListener("click", () => {
   btnStart.disabled = true;
-  completedList.innerHTML = "";
-  Object.keys(cqElements).forEach(k => delete cqElements[k]);
-  completedSection.classList.remove("visible");
+  // Reset session state
+  questionsBatch = [];
+  thinkingUnlocked = false;
+  activeQuestionIdx = null;
+  answeredSet = new Set();
+  if (thinkingTimerInterval) { clearInterval(thinkingTimerInterval); thinkingTimerInterval = null; }
+  stopAnswerTimer();
+  // Reset UI
+  $("questionsBatch").innerHTML = "";
+  $("questionsBatch").style.display = "none";
+  $("thinkingCard").style.display = "none";
+  $("activeAnswerCard").style.display = "none";
   feedbackCard.classList.remove("visible");
   feedbackArea.textContent = "";
-  feedbackArea.style.display = "";
   reportPanel.classList.remove("visible");
   $("reportAccordions").innerHTML = "";
   $("reportSummary").innerHTML = "";
+  progressText.textContent = "加载题目...";
   sendRTVIMessage("start_practice");
+});
+
+$("btnSkipThinking").addEventListener("click", () => {
+  sendRTVIMessage("skip_thinking");
+  enableAnswerButtons();
 });
 
 btnDone.addEventListener("click", () => {
   btnDone.disabled = true;
-  const elapsed = getElapsedSecs();
-  stopTimer();
-  sendRTVIMessage("done_answering", { elapsed_secs: elapsed });
+  sendRTVIMessage("done_answering", { elapsed_secs: getElapsedSecs() });
 });
 
 /* ---------- Init ---------- */

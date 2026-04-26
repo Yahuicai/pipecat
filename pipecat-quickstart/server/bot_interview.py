@@ -187,6 +187,7 @@ async def run_bot(transport: BaseTransport):
             enable_metrics=True,
             enable_usage_metrics=True,
         ),
+        idle_timeout_secs=None,  # thinking phase is 10 min; disable auto-cancel on silence
     )
 
     @transport.event_handler("on_client_connected")

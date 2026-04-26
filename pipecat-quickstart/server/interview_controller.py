@@ -1,23 +1,22 @@
 """Interview practice controller -- event-driven state machine.
 
-Sits in the pipeline between STT and TTS.  Accumulates transcripts,
-reacts to RTVI client-messages (start_practice / done_answering), reads
-questions via TTSSpeakFrame, and calls the LLM once for the final summary.
+Sits in the pipeline between STT and TTS. Displays all 3 questions at once,
+allows per-question answering after a thinking timer, then calls the LLM
+once for the final summary.
 """
 
 import os
+import time
 from enum import Enum
 from typing import Any
 
 import openai
 from loguru import logger
 from pipecat.frames.frames import (
-    BotStoppedSpeakingFrame,
     Frame,
     InputTransportMessageFrame,
     OutputTransportMessageUrgentFrame,
     TranscriptionFrame,
-    TTSSpeakFrame,
 )
 from pipecat.processors.frame_processor import FrameDirection, FrameProcessor
 
@@ -31,21 +30,24 @@ from reference_answer import generate_reference_answer
 
 class _State(Enum):
     IDLE = "idle"
-    READING_QUESTION = "reading_question"
-    WAITING_ANSWER = "waiting_answer"
+    SHOWING_QUESTIONS = "showing_questions"  # all 3 questions displayed, thinking timer active
+    ANSWERING = "answering"  # user answering one specific question (mic hot)
     GENERATING_FEEDBACK = "generating_feedback"
     FINISHED = "finished"
+
+
+THINKING_SECS = 600  # 10-minute thinking window
 
 
 class InterviewController(FrameProcessor):
     """Event-driven interview controller.
 
     State transitions:
-        idle -> reading_question   (on start_practice)
-        reading_question -> waiting_answer  (immediately after TTS push)
-        waiting_answer -> reading_question  (on done_answering, questions left)
-        waiting_answer -> generating_feedback (on done_answering, last question)
-        generating_feedback -> finished     (after feedback delivered)
+        idle -> showing_questions   (start_practice: all 3 questions sent at once)
+        showing_questions -> answering  (start_question: user clicks a question card)
+        answering -> showing_questions  (done_answering: user finishes one question)
+        showing_questions -> generating_feedback  (auto-triggered when all answered)
+        generating_feedback -> finished
     """
 
     def __init__(self, **kwargs):
@@ -53,26 +55,15 @@ class InterviewController(FrameProcessor):
         self._state = _State.IDLE
         self._session: PracticeSession | None = None
         self._current_transcript_parts: list[str] = []
-        self._waiting_for_tts_done: bool = False
-        # Pre-fetched reference answers: index -> answer text
+        self._active_idx: int | None = None
+        self._question_start_ts: dict[int, float] = {}
         self._ref_answers: dict[int, str] = {}
         self._ref_tasks: dict[int, object] = {}
-        # Per-question LLM comments: index -> comment text
         self._q_comments: dict[int, str] = {}
         self._q_comment_tasks: dict[int, object] = {}
 
     async def process_frame(self, frame: Frame, direction: FrameDirection):
         await super().process_frame(frame, direction)
-
-        if direction == FrameDirection.UPSTREAM:
-            if isinstance(frame, BotStoppedSpeakingFrame) and self._waiting_for_tts_done:
-                self._waiting_for_tts_done = False
-                self._state = _State.WAITING_ANSWER
-                self._current_transcript_parts.clear()
-                logger.info("TTS finished, starting answer timer")
-                await self._send_ui({"type": "waiting_answer"})
-            await self.push_frame(frame, direction)
-            return
 
         if isinstance(frame, TranscriptionFrame):
             await self._handle_transcription(frame)
@@ -94,10 +85,7 @@ class InterviewController(FrameProcessor):
         """Return True if this message was consumed (don't forward)."""
         if not isinstance(message, dict):
             return False
-        label = message.get("label")
-        msg_type = message.get("type")
-
-        if label != "rtvi-ai" or msg_type != "client-message":
+        if message.get("label") != "rtvi-ai" or message.get("type") != "client-message":
             return False
 
         data = message.get("data", {})
@@ -106,9 +94,15 @@ class InterviewController(FrameProcessor):
         if action == "start_practice":
             await self._on_start_practice()
             return True
+        if action == "skip_thinking":
+            await self._on_skip_thinking()
+            return True
+        if action == "start_question":
+            index = int((data.get("d") or {}).get("index", -1))
+            await self._on_start_question(index)
+            return True
         if action == "done_answering":
-            elapsed = int((data.get("d") or {}).get("elapsed_secs", 0))
-            await self._on_done_answering(elapsed)
+            await self._on_done_answering()
             return True
         return False
 
@@ -120,91 +114,85 @@ class InterviewController(FrameProcessor):
         if self._state not in (_State.IDLE, _State.FINISHED):
             return
         logger.info("Starting practice session")
-        # Reset all per-session state
         self._current_transcript_parts.clear()
-        self._waiting_for_tts_done = False
+        self._active_idx = None
+        self._question_start_ts.clear()
         self._ref_answers.clear()
         self._ref_tasks.clear()
         self._q_comments.clear()
         self._q_comment_tasks.clear()
         self._session = build_practice_session()
-        self._state = _State.READING_QUESTION
-        # Pre-fetch reference answers for all questions in background
+        self._state = _State.SHOWING_QUESTIONS
+
+        # Pre-fetch reference answers during the thinking window
         for i, q in enumerate(self._session.questions):
             self._ref_tasks[i] = self.create_task(self._fetch_ref_answer(q, i), f"ref_answer_{i}")
-        await self._read_current_question(with_intro=True)
 
-    async def _on_done_answering(self, elapsed_secs: int = 0):
-        if self._state != _State.WAITING_ANSWER or self._session is None:
+        await self._send_ui(
+            {
+                "type": "questions_batch",
+                "questions": [
+                    {"index": i + 1, "category": q.category, "text": q.prompt}
+                    for i, q in enumerate(self._session.questions)
+                ],
+                "thinking_secs": THINKING_SECS,
+            }
+        )
+
+    async def _on_skip_thinking(self):
+        if self._state != _State.SHOWING_QUESTIONS:
+            return
+        logger.info("User skipped thinking timer")
+        await self._send_ui({"type": "thinking_ended"})
+
+    async def _on_start_question(self, index: int):
+        if self._state != _State.SHOWING_QUESTIONS or self._session is None:
+            return
+        idx = index - 1  # client sends 1-based; store 0-based
+        if idx < 0 or idx >= self._session.total_questions:
+            return
+        if self._session.is_answered(idx):
+            return
+        logger.info(f"User started answering Q{index}")
+        self._active_idx = idx
+        self._question_start_ts[idx] = time.monotonic()
+        self._current_transcript_parts.clear()
+        self._state = _State.ANSWERING
+        await self._send_ui({"type": "waiting_answer", "index": index})
+
+    async def _on_done_answering(self):
+        if self._state != _State.ANSWERING or self._session is None or self._active_idx is None:
             return
 
+        idx = self._active_idx
+        elapsed = int(time.monotonic() - self._question_start_ts.get(idx, time.monotonic()))
         answer = " ".join(self._current_transcript_parts).strip() or "（未检测到回答）"
-        q_index = self._session.current_question_index
-        self._session.record_answer(answer, elapsed_secs)
+        self._session.record_answer(idx, answer, elapsed)
         self._current_transcript_parts.clear()
-        logger.info(f"Answer recorded for Q{q_index}: {answer[:80]}...")
+        logger.info(f"Answer recorded for Q{idx + 1}: {answer[:80]}...")
 
         await self._send_ui(
             {
                 "type": "answer_transcript",
-                "index": q_index + 1,
+                "index": idx + 1,
                 "text": answer,
             }
         )
-        if self._session.is_complete:
+
+        self._active_idx = None
+        self._state = _State.SHOWING_QUESTIONS
+
+        if self._session.all_answered():
             self._state = _State.GENERATING_FEEDBACK
             await self._send_ui({"type": "generating_feedback"})
-            await self._send_ui(
-                {
-                    "type": "progress",
-                    "current": self._session.total_questions,
-                    "total": self._session.total_questions,
-                    "label": "生成总点评中...",
-                }
-            )
             await self._generate_and_deliver_feedback()
-        else:
-            self._state = _State.READING_QUESTION
-            await self._read_current_question(with_intro=False)
-
-    # ------------------------------------------------------------------
-    # Question reading (fixed text -> TTS, no LLM)
-    # ------------------------------------------------------------------
-
-    async def _read_current_question(self, *, with_intro: bool):
-        idx = self._session.current_question_index
-        q = self._session.questions[idx]
-
-        await self._send_ui(
-            {
-                "type": "progress",
-                "current": idx + 1,
-                "total": self._session.total_questions,
-            }
-        )
-        await self._send_ui(
-            {
-                "type": "question",
-                "index": idx + 1,
-                "category": q.category,
-                "text": q.prompt,
-            }
-        )
-
-        if with_intro:
-            tts_text = f"好的，今天我们练习三道题。第一题，{q.category}类。{q.prompt}"
-        else:
-            tts_text = f"收到，我们进入下一题。第{idx + 1}题，{q.category}类。{q.prompt}"
-
-        self._waiting_for_tts_done = True
-        await self.push_frame(TTSSpeakFrame(text=tts_text))
 
     # ------------------------------------------------------------------
     # Transcript accumulation
     # ------------------------------------------------------------------
 
     async def _handle_transcription(self, frame: TranscriptionFrame):
-        if self._state == _State.WAITING_ANSWER and frame.text.strip():
+        if self._state == _State.ANSWERING and frame.text.strip():
             self._current_transcript_parts.append(frame.text.strip())
             await self._send_ui(
                 {
@@ -214,11 +202,10 @@ class InterviewController(FrameProcessor):
             )
 
     # ------------------------------------------------------------------
-    # Pre-fetch reference answer (background, started at question draw)
+    # Pre-fetch reference answer (background, during thinking window)
     # ------------------------------------------------------------------
 
     async def _fetch_ref_answer(self, q, index: int):
-        """Fetch reference answer in background; stored for delivery in final report."""
         try:
             ref = await generate_reference_answer(q, index)
             self._ref_answers[index] = ref.answer
@@ -227,11 +214,10 @@ class InterviewController(FrameProcessor):
             logger.error(f"Reference answer generation failed for Q{index + 1}: {e}")
 
     # ------------------------------------------------------------------
-    # Per-question comment (started after all answers collected)
+    # Per-question comment (launched after all answers collected)
     # ------------------------------------------------------------------
 
     async def _generate_question_comment(self, q, answer: str, index: int):
-        """Call LLM to generate a per-question comment for one question."""
         prompt = (
             f"你是一名广州事业单位面试陪练教练。"
             f"请对以下一道面试题和考生的回答给出简短点评。\n\n"
@@ -266,14 +252,12 @@ class InterviewController(FrameProcessor):
     async def _generate_and_deliver_feedback(self):
         import asyncio
 
-        # Launch per-question comment tasks concurrently (answers now available)
         for i, q in enumerate(self._session.questions):
-            answer = self._session.answers[i] if i < len(self._session.answers) else ""
+            answer = self._session.answers.get(i, "")
             self._q_comment_tasks[i] = self.create_task(
                 self._generate_question_comment(q, answer, i), f"q_comment_{i}"
             )
 
-        # Stream overall summary to frontend while background tasks run
         history = self._session.formatted_history()
         prompt = (
             "你是一名广州事业单位面试陪练教练。"
@@ -312,30 +296,27 @@ class InterviewController(FrameProcessor):
         feedback_text = "".join(feedback_parts)
         await self._send_ui({"type": "feedback_done"})
 
-        # Parse overall + recommendations from streamed text
         overall, recommendations = self._parse_summary(feedback_text)
 
-        # Wait for all background tasks (ref answers + per-question comments)
         all_bg_tasks = list(self._ref_tasks.values()) + list(self._q_comment_tasks.values())
         pending = [t for t in all_bg_tasks if isinstance(t, asyncio.Task) and not t.done()]
         if pending:
             await asyncio.gather(*pending, return_exceptions=True)
 
-        # Assemble structured report
         n = len(self._session.questions)
-        self._session.reference_answers = [self._ref_answers.get(i, "") for i in range(n)]
-        self._session.question_comments = [self._q_comments.get(i, "") for i in range(n)]
+        self._session.reference_answers = {i: self._ref_answers.get(i, "") for i in range(n)}
+        self._session.question_comments = {i: self._q_comments.get(i, "") for i in range(n)}
 
         report_questions = []
         for i, q in enumerate(self._session.questions):
-            elapsed = self._session.answer_times[i] if i < len(self._session.answer_times) else 0
+            elapsed = self._session.answer_times.get(i, 0)
             mm, ss = divmod(elapsed, 60)
             report_questions.append(
                 {
                     "index": i + 1,
                     "category": q.category,
                     "prompt": q.prompt,
-                    "answer": self._session.answers[i] if i < len(self._session.answers) else "",
+                    "answer": self._session.answers.get(i, ""),
                     "elapsed_secs": elapsed,
                     "elapsed_label": f"{mm}分{ss:02d}秒",
                     "reference_answer": self._ref_answers.get(i, ""),
@@ -364,7 +345,6 @@ class InterviewController(FrameProcessor):
 
     @staticmethod
     def _parse_summary(text: str) -> tuple[str, str]:
-        """Extract [总体评价] and [改进建议] sections from streamed feedback text."""
         import re
 
         parts = re.split(r"\[([^\]]+)\]", text)
@@ -375,16 +355,8 @@ class InterviewController(FrameProcessor):
         recommendations = sections.get("改进建议", "")
         return overall, recommendations
 
-    # ------------------------------------------------------------------
-    # Helper: send JSON to the frontend via data channel
-    # ------------------------------------------------------------------
-
     async def _send_ui(self, data: dict):
-        msg = {
-            "label": "rtvi-ai",
-            "type": "server-message",
-            "data": data,
-        }
+        msg = {"label": "rtvi-ai", "type": "server-message", "data": data}
         await self.push_frame(
             OutputTransportMessageUrgentFrame(message=msg),
             FrameDirection.DOWNSTREAM,
